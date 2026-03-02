@@ -1,0 +1,2 @@
+# SimplificaMe
+Analisis Estaregico
