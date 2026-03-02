@@ -1,4 +1,4 @@
-// src/services/ai/geminiService.ts
+// src/services/api/geminiService.ts
 import { GoogleGenAI } from "@google/genai";
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;

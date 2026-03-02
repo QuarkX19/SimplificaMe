@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { User } from '@supabase/supabase-js';
 import { supabase } from "./services/api/supabase";
-import { getAuronResponse } from "./services/ai/geminiService";
+import { getAuronResponse } from "./api/geminiService";
 import { buildChatContext } from "./core/chat/chat.context";
 import { Lock, Send, Activity, LogOut, ShieldCheck, ChevronRight } from "lucide-react";
 import { MatrixRenderer } from "./ui/layers/MatrixRenderer";
