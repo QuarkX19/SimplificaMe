@@ -1,0 +1,66 @@
+{
+  "methodology": {
+    "name": "SimplificaME – Metodología Estratégica de 8 Capas",
+    "version": "1.0.0",
+    "language": "es",
+    "loop": true,
+    "layers": [
+      {
+        "id": 1,
+        "code": "ENTENDER",
+        "name": "Entender el Contexto",
+        "objective": "Comprender el contexto organizacional, actores, restricciones y expectativas.",
+        "mainMatrix": {
+          "id": "context_matrix",
+          "name": "Matriz de Contexto Estratégico",
+          "fields": ["problema_central", "alcance", "horizonte_estrategico", "restricciones", "supuestos"]
+        },
+        "subMatrices": [
+          { "id": "stakeholders", "name": "Mapa de Stakeholders", "fields": ["actor", "interes", "poder", "expectativa"] },
+          { "id": "needs_pains", "name": "Necesidades y Dolencias", "fields": ["stakeholder", "necesidad", "dolencia"] }
+        ],
+        "outputs": ["contexto_validado", "stakeholders_priorizados"],
+        "kpisEnabled": false,
+        "unlocks": [2]
+      },
+      {
+        "id": 2,
+        "code": "DIAGNOSTICAR",
+        "name": "Diagnóstico Integral",
+        "objective": "Identificar la situación actual mediante análisis interno y externo.",
+        "mainMatrix": {
+          "id": "diagnostic_matrix",
+          "name": "Matriz Diagnóstica Integral",
+          "fields": ["dimension", "hallazgo", "impacto", "riesgo", "prioridad"]
+        },
+        "subMatrices": [
+          { "id": "foda", "name": "FODA Cruzado", "fields": ["fortaleza", "oportunidad", "debilidad", "amenaza"] },
+          { "id": "pestel", "name": "Análisis PESTEL", "fields": ["factor", "descripcion", "impacto"] }
+        ],
+        "kpisEnabled": true,
+        "outputs": ["brechas_priorizadas", "riesgos_criticos"],
+        "unlocks": [3]
+      },
+      {
+        "id": 3,
+        "code": "RUMBO",
+        "name": "Direccionamiento Estratégico",
+        "objective": "Definir el rumbo estratégico de la organización.",
+        "mainMatrix": {
+          "id": "strategy_matrix",
+          "name": "Matriz de Direccionamiento",
+          "fields": ["proposito", "vision", "objetivo_estrategico", "eje_estrategico"]
+        },
+        "kpisEnabled": false,
+        "outputs": ["objetivos_estrategicos_definidos"],
+        "unlocks": [4]
+      },
+      {
+        "id": 4,
+        "code": "BSC",
+        "name": "Balanced Scorecard",
+        "objective": "Traducir la estrategia en indicadores medibles.",
+        "mainMatrix": {
+          "id": "bsc_matrix",
+          "name": "Balanced Scorecard",
+          "fields

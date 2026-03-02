@@ -1,0 +1,8 @@
+
+{
+  "name": "SimplificaME - AFSE NeuroCode Ultra",
+  "description": "A high-performance predictive auditing dashboard and strategic flow management system powered by AI (AURON) for neuro-tactical enterprise decision-making.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

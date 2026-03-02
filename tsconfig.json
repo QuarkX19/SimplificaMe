@@ -1,0 +1,16 @@
+// tsconfig.node.json
+{
+  "compilerOptions": {
+    "composite": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM"],           // ✅ DOM agregado
+    "types": ["node", "vite/client"],   // ✅ vite/client agregado
+    "allowSyntheticDefaultImports": true, // ✅
+    "skipLibCheck": true
+  },
+  "include": [
+    "vite.config.ts"
+  ]
+}
