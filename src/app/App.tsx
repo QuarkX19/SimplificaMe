@@ -26,6 +26,12 @@ import {
   ResponsiveContainer, RadialBarChart, RadialBar
 } from "recharts";
 import { MatrixRenderer } from "../ui/layers/MatrixRenderer";
+import { MEModule } from "../ui/hub/hub.types";
+import { ModuleSimplificaME } from "../ui/hub/ModuleSimplificaME";
+import { ModuleGestionaME } from "../ui/hub/ModuleGestionaME";
+import { ModuleCapacitaME } from "../ui/hub/ModuleCapacitaME";
+import { ModuleEvaluaME } from "../ui/hub/ModuleEvaluaME";
+import { ModuleConsultaME } from "../ui/hub/ModuleConsultaME";
 import { getLayerById, getAllLayers } from "../core/methodology/methodology.engine";
 import { validateLayer } from "../core/methodology/layer.validator";
 import {
@@ -470,7 +476,7 @@ const LoginScreen: React.FC<{ email: string; setEmail: (v: string) => void }> = 
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 const App = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const ME_MODULES = useMEModules(t);
 
   const [sessionUser, setSessionUser]         = useState<User | null>(null);
@@ -487,6 +493,7 @@ const App = () => {
   const [input, setInput]                     = useState('');
   const [auronLoading, setAuronLoading]       = useState(false);
   const [activeView, setActiveView]           = useState<ActiveView>('hub');
+  const [activeModule, setActiveModule]       = useState<MEModule>(MEModule.SIMPLIFICAME);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin]       = useState(false);
   const [isListening, setIsListening]         = useState(false);
@@ -672,7 +679,7 @@ const App = () => {
       <BackgroundMesh />
 
       {/* TOPBAR */}
-      <header className="relative z-50 h-16 border-b flex items-center px-6 gap-4"
+      <header className={`relative z-50 h-16 border-b flex items-center px-6 gap-4 ${activeView === 'hub' ? 'hidden' : ''}`}
         style={{ background: 'rgba(6,9,15,0.95)', backdropFilter: 'blur(20px)', borderColor: T.border }}>
         <div className="flex items-center gap-3">
           {activeView !== 'hub' && (
@@ -779,143 +786,84 @@ const App = () => {
           </aside>
         )}
 
-        {/* HUB */}
+        {/* HUB / MODULAR DASHBOARD */}
         {activeView === 'hub' && (
-          <div className="flex-1 overflow-y-auto">
-            <div className="max-w-5xl mx-auto px-8 py-14 space-y-14">
-              <div className="text-center space-y-6">
-                <p className="text-sm font-bold uppercase tracking-[0.5em]" style={{ color: T.textDim }}>
-                  {company?.name ?? t('brand.company')}
-                </p>
-                <h1 className="text-7xl font-black tracking-tight leading-none">
-                  <span style={{ color: T.text }}>Arquitectura</span>
-                  <span style={{ color: T.cyan, filter: 'drop-shadow(0 0 40px rgba(0,229,255,0.5))' }}>ME</span>
-                  <sup className="text-3xl font-bold" style={{ color: T.textDim }}>™</sup>
-                </h1>
-                <p className="text-lg font-bold uppercase tracking-[0.4em]" style={{ color: T.textMid }}>
-                  {t('platform:hub.tagline')}
-                </p>
-                <div className="flex justify-center">
-                  <div className="inline-flex items-center gap-4 px-8 py-4 rounded-2xl"
-                    style={{ background: `${afseStatus.color}10`, border: `1px solid ${afseStatus.color}25` }}>
-                    <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: afseStatus.color }} />
-                    <span className="text-lg font-black uppercase tracking-wider" style={{ color: afseStatus.color }}>
-                      {t('afse:score.label')} {afseScore.toFixed(0)}/100
+          <div className="flex-1 overflow-y-auto bg-[#0a0f1d] px-4 md:px-8 lg:px-12 py-10 relative z-10" style={{ background: T.bg }}>
+            {/* TOP HEADER / PROFILE ME */}
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center mb-16 gap-8 relative z-20">
+              <div className="flex items-center gap-6 w-full md:w-auto">
+                <div className="w-16 h-16 border border-[#00ffff]/20 rounded-2xl flex items-center justify-center bg-[#00ffff]/5 shadow-[0_0_15px_rgba(0,255,255,0.1)] flex-shrink-0">
+                   <div className="text-2xl font-black text-[#00ffff]">{sessionUser?.email?.[0]?.toUpperCase() ?? 'D'}</div>
+                </div>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-black text-white italic tracking-tighter shadow-black drop-shadow-md leading-tight">
+                    <span className="text-slate-500 text-base md:text-lg mr-2 font-normal not-italic block md:inline">{t('common.welcome')},</span>
+                    {company?.name ?? t('brand.company')}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-3 mt-3">
+                    <span className="px-3 py-1 bg-[#00ffff]/10 border border-[#00ffff]/20 rounded-full text-[#00ffff] text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                      {sessionUser?.email}
                     </span>
-                    <div className="w-px h-5 bg-white/10" />
-                    <span className="text-base font-bold uppercase tracking-wider" style={{ color: afseStatus.color }}>
-                      {afseStatus.label}
+                    <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-slate-400 text-[10px] font-bold uppercase tracking-widest hover:text-white transition-colors cursor-pointer" onClick={() => setActiveView('admin')}>
+                      {t('ui.role')}: {t('roles.estrategico')}
                     </span>
+                    <button onClick={() => supabase.auth.signOut()} className="px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full text-red-500 text-[10px] font-bold uppercase tracking-widest hover:bg-red-500/20 transition-colors">
+                      <LogOut size={12} className="inline mr-1" /> SALIR
+                    </button>
                   </div>
                 </div>
               </div>
 
-              {/* AFSE Progress */}
-              <div className="rounded-3xl p-8" style={{ background: T.bg2, border: `1px solid ${T.border}` }}>
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <p className="text-sm font-bold uppercase tracking-widest mb-1" style={{ color: T.textMid }}>
-                      {t('platform:hub.cycleProgress')}
-                    </p>
-                    <p className="text-2xl font-black" style={{ color: T.text }}>
-                      {completedLayers}{' '}
-                      <span className="text-xl font-normal" style={{ color: T.textMid }}>{t('afse:score.layers')}</span>
-                    </p>
-                  </div>
-                  <span className="text-5xl font-black" style={{ color: T.cyan }}>{progressPct}%</span>
+              <div className="flex items-center gap-6 md:ml-auto">
+                <div className="text-right hidden sm:block">
+                  <p className="text-slate-500 text-[9px] uppercase font-bold tracking-widest">{t('afse:score.label')}</p>
+                  <p className="text-white font-black text-sm" style={{ color: afseStatus.color }}>{afseStatus.label}</p>
                 </div>
-                <div className="flex gap-2">
-                  {Array.from({ length: 8 }, (_, i) => {
-                    const n = i + 1;
-                    const done = n < maxPhaseReached;
-                    const current = n === activePhase;
-                    const locked = n > maxPhaseReached;
-                    const color = LAYER_COLORS[i];
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                        <div className="w-full h-10 rounded-xl flex items-center justify-center transition-all"
-                          style={{
-                            background: done ? `${color}18` : current ? `${color}14` : 'rgba(255,255,255,0.02)',
-                            border: `1px solid ${current ? color+'60' : done ? color+'30' : T.border}`,
-                            boxShadow: current ? `0 0 20px ${color}30` : 'none',
-                          }}>
-                          <span className="text-sm font-black" style={{ color: done ? color : current ? color : T.textDim }}>
-                            {done ? '✓' : current ? '▶' : locked ? '·' : String(n).padStart(2,'0')}
-                          </span>
-                        </div>
-                        <span className="text-xs font-bold" style={{ color: current ? color : T.textDim }}>L{String(n).padStart(2,'0')}</span>
-                      </div>
-                    );
-                  })}
+                <div className="relative w-16 h-16 flex items-center justify-center flex-shrink-0">
+                  <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
+                    <path className="text-white/5" strokeDasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" />
+                    <path style={{ color: afseStatus.color }} strokeDasharray={`${afseScore}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  <span className="text-sm font-black text-white">{afseScore.toFixed(0)}</span>
                 </div>
               </div>
+            </div>
 
-              {/* 5 Módulos */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="h-px flex-1" style={{ background: T.border }} />
-                  <span className="text-sm font-bold uppercase tracking-[0.4em]" style={{ color: T.textDim }}>
-                    {t('afse:ecosystem')}
+            {/* MODULE NAVIGATION */}
+            <div className="max-w-7xl mx-auto mb-12 flex flex-wrap gap-4 relative z-20">
+              {[
+                { id: MEModule.SIMPLIFICAME, label: t('modules.simplificame'), icon: Layers, activeColor: 'text-[#00ffff]', bgActive: 'bg-[#00ffff]/10 border-[#00ffff]/30 shadow-[0_0_30px_#00ffff15]' },
+                { id: MEModule.GESTIONAME, label: t('modules.gestioname'), icon: Target, activeColor: 'text-emerald-400', bgActive: 'bg-emerald-400/10 border-emerald-400/30 shadow-[0_0_30px_#34d39915]' },
+                { id: MEModule.CAPACITAME, label: t('modules.capacitame'), icon: GraduationCap, activeColor: 'text-indigo-400', bgActive: 'bg-indigo-400/10 border-indigo-400/30 shadow-[0_0_30px_#818cf815]' },
+                { id: MEModule.EVALUAME, label: t('modules.evaluame'), icon: ShieldCheck, activeColor: 'text-amber-400', bgActive: 'bg-amber-400/10 border-amber-400/30 shadow-[0_0_30px_#fbbf2415]' },
+                { id: MEModule.CONSULTAME, label: t('modules.consultame'), icon: BarChart3, activeColor: 'text-rose-400', bgActive: 'bg-rose-400/10 border-rose-400/30 shadow-[0_0_30px_#fb718515]' },
+              ].map(mod => (
+                <button key={mod.id} onClick={() => setActiveModule(mod.id)}
+                  className={`flex-1 min-w-[140px] md:min-w-[180px] p-4 rounded-2xl flex md:flex-row flex-col items-center justify-center gap-3 transition-all duration-300 border hover:-translate-y-1 ${
+                    activeModule === mod.id ? mod.bgActive : 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-400 hover:text-white hover:border-white/20'
+                  }`}>
+                  <mod.icon size={20} className={activeModule === mod.id ? mod.activeColor : 'opacity-70'} />
+                  <span className={`text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] ${activeModule === mod.id ? 'text-white' : ''}`}>
+                    {mod.label}
                   </span>
-                  <div className="h-px flex-1" style={{ background: T.border }} />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {ME_MODULES.map(mod => (
-                    <div key={mod.id}
-                      className="relative rounded-3xl p-7 transition-all duration-300 group hover:-translate-y-1"
-                      style={{ background: mod.active ? `${mod.color}07` : T.bg2, border: `1px solid ${mod.active ? mod.color+'25' : T.border}` }}>
-                      <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                        style={{ background: `radial-gradient(ellipse at 50% 0%, ${mod.color}08, transparent 70%)` }} />
-                      <div className="absolute top-5 right-5">
-                        {mod.active ? (
-                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
-                            style={{ background: `${mod.color}15`, border: `1px solid ${mod.color}30` }}>
-                            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: mod.color }} />
-                            <span className="text-xs font-black uppercase tracking-wider" style={{ color: mod.color }}>{t('status.active')}</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
-                            style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.border}` }}>
-                            <Lock size={11} style={{ color: T.textDim }} />
-                            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: T.textDim }}>{mod.plan}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
-                        style={{ background: mod.active ? `${mod.color}15` : 'rgba(255,255,255,0.04)', border: `1px solid ${mod.active ? mod.color+'30' : T.border}`, color: mod.active ? mod.color : T.textDim }}>
-                        {mod.icon}
-                      </div>
-                      <h3 className="text-xl font-black tracking-tight mb-1">
-                        <span style={{ color: T.text }}>{t(mod.nameKey).replace('ME','')}</span>
-                        <span style={{ color: mod.active ? mod.color : T.textDim }}>ME</span>
-                      </h3>
-                      <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: mod.active ? mod.color : T.textDim }}>
-                        {t(mod.taglineKey)}
-                      </p>
-                      <p className="text-sm leading-relaxed mb-6" style={{ color: T.textMid }}>{t(mod.descKey)}</p>
-                      {mod.active ? (
-                        <button onClick={() => setActiveView('workspace')}
-                          className="w-full py-3.5 rounded-2xl text-sm font-black uppercase tracking-widest text-black flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]"
-                          style={{ background: mod.color, boxShadow: `0 6px 30px ${mod.color}35` }}>
-                          {t('actions.enter')} <ArrowRight size={16} />
-                        </button>
-                      ) : (
-                        <button disabled className="w-full py-3.5 rounded-2xl text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2"
-                          style={{ background: 'transparent', border: `1px solid ${T.border}`, color: T.textDim, cursor: 'not-allowed' }}>
-                          <Lock size={14} /> {t('status.locked')}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+                </button>
+              ))}
+            </div>
 
-              <div className="text-center py-8 border-t" style={{ borderColor: T.border }}>
-                <p className="text-base font-semibold" style={{ color: T.textDim }}>{t('brand.slogan')}</p>
-                <p className="text-lg font-black uppercase tracking-widest mt-2" style={{ color: T.cyan, opacity: 0.5 }}>
-                  {t('brand.sloganAccent')}
-                </p>
-              </div>
+            {/* ACTIVE MODULE RENDERER */}
+            <div className="max-w-7xl mx-auto relative z-20">
+              {activeModule === MEModule.SIMPLIFICAME && <ModuleSimplificaME onEnterWorkspace={() => setActiveView('workspace')} langToggle={() => applyPreferredLang(i18n.language === 'es' ? 'en' : 'es')} />}
+              {activeModule === MEModule.GESTIONAME && <ModuleGestionaME />}
+              {activeModule === MEModule.CAPACITAME && <ModuleCapacitaME />}
+              {activeModule === MEModule.EVALUAME && <ModuleEvaluaME />}
+              {activeModule === MEModule.CONSULTAME && <ModuleConsultaME />}
+            </div>
+            
+            <div className="max-w-7xl mx-auto text-center py-8 mt-12 border-t" style={{ borderColor: T.border }}>
+              <p className="text-base font-semibold" style={{ color: T.textDim }}>{t('brand.slogan')}</p>
+              <p className="text-lg font-black uppercase tracking-widest mt-2" style={{ color: T.cyan, opacity: 0.5 }}>
+                {t('brand.sloganAccent')}
+              </p>
             </div>
           </div>
         )}
