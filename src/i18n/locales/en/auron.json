@@ -1,0 +1,18 @@
+{
+  "name": "AURON",
+  "role": "AI Strategic Director",
+  "status": "Online",
+  "watching": "Layer L{{layer}} · {{code}}",
+  "terminal": "AURON · Terminal Feed",
+  "waiting": "_ Waiting for AURON transmission...",
+  "placeholder": "Ask AURON...",
+  "greeting": "System active. {{company}} · AFSE Cycle started · Layer {{layer}} in progress · Score {{score}}/100. Ready to work with you.",
+  "layerNotValid": "Layer {{layer}} not yet validated. Pending outputs: {{outputs}}.",
+  "layerClosed": "Layer {{layer}} successfully closed. Unlocking L{{next}}...",
+  "connectionError": "Connection error with AURON. Check your connection and try again.",
+  "user": "USER",
+  "advance": {
+    "hint": "Say \"advance\" to close the current layer",
+    "keywords": "advance|next|close layer"
+  }
+}

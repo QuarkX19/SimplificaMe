@@ -1,19 +1,25 @@
 /**
- * SIMPLIFICAME: Strategic Operating System
+ * ARQUITECTURA ME — Neuro Code Style
+ * App.tsx v10.0 — i18n ES/EN · Ruta B Plan Maestro v6
  * ARCHITECT: Luis Reinaldo Ruiz Sarmiento
- * STACK: React + Vite + Supabase + Tailwind + Lucide + Recharts
- * DESIGN: AFSE NeuroCode Ultra — Cyberpunk Strategic OS
+ * COMPANY: calidadysostenibilidad.com SAS
+ * CAMBIO v10.0: i18n completo con useTranslation() · LanguageSwitcher · applyPreferredLang
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { User } from '@supabase/supabase-js';
+import { useTranslation } from 'react-i18next';
 import { supabase } from "../services/api/supabase";
 import { getAuronResponse } from "../services/api/geminiService";
 import { buildChatContext } from "../core/chat/chat.context";
+import { applyPreferredLang } from "../i18n";
+import LanguageSwitcher from "../i18n/LanguageSwitcher";
 import {
-  Lock, Activity, LogOut, ShieldCheck, ChevronRight,
+  Lock, Activity, LogOut, ShieldCheck,
   BarChart3, Cpu, TrendingUp, AlertCircle, Terminal,
-  RefreshCw, Zap, Network, Eye, Target, Brain
+  RefreshCw, Network, Eye, Target, Brain,
+  Layers, GraduationCap, ClipboardCheck, MessageSquare,
+  ArrowRight, Star, Settings, Mic, MicOff, Send
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
@@ -26,100 +32,184 @@ import {
   getUserCompany, getActiveCycle, saveLayerProgress,
   getActivePhase, type Company, type AfseCycle,
 } from "../services/company";
-import {
-  buildEnrichedAuronContext, saveAuronMessage,
-} from "../services/auronMemory";
+import { buildEnrichedAuronContext, saveAuronMessage } from "../services/auronMemory";
+import SuperAdminPanel from "./SuperAdminPanel";
+import SignupScreen from "./SignupScreen";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 type MsgRole = 'user' | 'auron';
 interface ChatMsg { role: MsgRole; text: string; ts: string; }
+type ActiveView = 'hub' | 'workspace' | 'dashboard' | 'admin';
 
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const LAYER_COLORS = ['#00ffff', '#00e5ff', '#00ccff', '#0099ff', '#0066ff', '#5533ff', '#9900ff', '#cc00ff'];
-const STATUS_MAP = {
-  ÓPTIMO:    { color: '#00ffff', glow: '0 0 20px #00ffff', label: 'ÓPTIMO' },
-  ESTABLE:   { color: '#28a745', glow: '0 0 20px #28a745', label: 'ESTABLE' },
-  EN_RIESGO: { color: '#eab308', glow: '0 0 20px #eab308', label: 'EN RIESGO' },
-  CRÍTICO:   { color: '#ef4444', glow: '0 0 20px #ef4444', label: 'CRÍTICO' },
+// ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
+const T = {
+  bg:      '#06090F',
+  bg2:     '#0A0E18',
+  bg3:     '#0F1420',
+  border:  'rgba(255,255,255,0.06)',
+  border2: 'rgba(255,255,255,0.12)',
+  cyan:    '#00E5FF',
+  green:   '#00E676',
+  amber:   '#FFB300',
+  red:     '#FF3D57',
+  purple:  '#7C4DFF',
+  text:    '#F1F5F9',
+  textMid: '#94A3B8',
+  textDim: '#475569',
 };
 
-function getAfseStatus(score: number) {
-  if (score >= 90) return STATUS_MAP.ÓPTIMO;
-  if (score >= 70) return STATUS_MAP.ESTABLE;
-  if (score >= 50) return STATUS_MAP.EN_RIESGO;
-  return STATUS_MAP.CRÍTICO;
+const LAYER_COLORS = [
+  '#00E5FF','#00D4F5','#00BFEB','#00A3E0',
+  '#0085D6','#2D63CC','#5540C2','#7C1DB8'
+];
+
+function getAfseStatus(score: number, t: (k: string) => string) {
+  if (score >= 90) return { color: '#00E676', label: t('afse:score.status.optimo')   };
+  if (score >= 70) return { color: '#00E5FF', label: t('afse:score.status.estable')  };
+  if (score >= 50) return { color: '#FFB300', label: t('afse:score.status.enRiesgo') };
+  return               { color: '#FF3D57', label: t('afse:score.status.critico')  };
 }
 
-// ─── ANIMATED SCANLINE ────────────────────────────────────────────────────────
-const Scanline = () => (
-  <div className="pointer-events-none fixed inset-0 z-[999] overflow-hidden opacity-[0.03]"
-    style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,255,0.15) 2px, rgba(0,255,255,0.15) 4px)' }} />
-);
-
-// ─── CYBER GRID BACKGROUND ────────────────────────────────────────────────────
-const CyberGrid = () => (
-  <div className="pointer-events-none fixed inset-0 z-0 opacity-[0.04]"
-    style={{
-      backgroundImage: `
-        linear-gradient(rgba(0,255,255,0.5) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,255,255,0.5) 1px, transparent 1px)
-      `,
-      backgroundSize: '60px 60px'
-    }} />
-);
-
-// ─── GLITCH TEXT ──────────────────────────────────────────────────────────────
-const GlitchText: React.FC<{ text: string; className?: string }> = ({ text, className = '' }) => (
-  <span className={`relative inline-block ${className}`}
-    style={{ textShadow: '2px 0 #ff0055, -2px 0 #00ffff' }}>
-    {text}
-  </span>
-);
-
-// ─── LAYER NAV PILL ───────────────────────────────────────────────────────────
-interface LayerPillProps {
-  id: number; code: string; isLocked: boolean;
-  isCurrent: boolean; isCompleted: boolean;
-  onClick: () => void;
+// ─── ME_MODULES — usa i18n (se construye dentro del componente) ───────────────
+function useMEModules(t: (k: string) => string) {
+  return useMemo(() => [
+    { id: 'simplifica', nameKey: 'afse:modules.simplifica.name', taglineKey: 'afse:modules.simplifica.tagline', descKey: 'afse:modules.simplifica.desc', icon: <Layers size={28} />,        color: '#00E5FF', active: true,  plan: t('platform:plans.starter')    },
+    { id: 'gestiona',   nameKey: 'afse:modules.gestiona.name',   taglineKey: 'afse:modules.gestiona.tagline',   descKey: 'afse:modules.gestiona.desc',   icon: <ClipboardCheck size={28} />, color: '#00E676', active: false, plan: t('platform:plans.operativo')  },
+    { id: 'capacita',   nameKey: 'afse:modules.capacita.name',   taglineKey: 'afse:modules.capacita.tagline',   descKey: 'afse:modules.capacita.desc',   icon: <GraduationCap size={28} />,  color: '#FFB300', active: false, plan: t('platform:plans.formacion')  },
+    { id: 'evalua',     nameKey: 'afse:modules.evalua.name',     taglineKey: 'afse:modules.evalua.tagline',     descKey: 'afse:modules.evalua.desc',     icon: <Star size={28} />,           color: '#7C4DFF', active: false, plan: t('platform:plans.formacion')  },
+    { id: 'consulta',   nameKey: 'afse:modules.consulta.name',   taglineKey: 'afse:modules.consulta.tagline',   descKey: 'afse:modules.consulta.desc',   icon: <MessageSquare size={28} />,  color: '#FF6B35', active: false, plan: t('platform:plans.enterprise') },
+  ], [t]);
 }
-const LayerPill: React.FC<LayerPillProps> = ({ id, code, isLocked, isCurrent, isCompleted, onClick }) => {
-  const color = LAYER_COLORS[id - 1] ?? '#00ffff';
-  return (
-    <button
-      disabled={isLocked}
-      onClick={onClick}
-      className="w-full p-5 rounded-2xl border text-left transition-all duration-300 relative overflow-hidden group"
+
+// ─── BACKGROUND ───────────────────────────────────────────────────────────────
+const BackgroundMesh = () => (
+  <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+    <div className="absolute -top-40 -left-40 w-[700px] h-[700px] rounded-full opacity-[0.08]"
+      style={{ background: 'radial-gradient(circle, #00E5FF 0%, transparent 70%)' }} />
+    <div className="absolute -bottom-60 -right-60 w-[800px] h-[800px] rounded-full opacity-[0.05]"
+      style={{ background: 'radial-gradient(circle, #7C4DFF 0%, transparent 70%)' }} />
+    <div className="absolute inset-0 opacity-[0.02]"
       style={{
-        background: isCurrent ? `${color}12` : 'rgba(0,0,0,0.4)',
-        borderColor: isCurrent ? color : 'rgba(255,255,255,0.06)',
-        boxShadow: isCurrent ? `0 0 30px ${color}20` : 'none',
+        backgroundImage: `linear-gradient(rgba(0,229,255,1) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(0,229,255,1) 1px, transparent 1px)`,
+        backgroundSize: '80px 80px'
+      }} />
+  </div>
+);
+
+// ─── CYS LOGO (sin cambios — sin texto, no necesita i18n) ────────────────────
+const CYSLogo = () => {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const handleClick = () => {
+    const el = svgRef.current; if (!el) return;
+    el.style.transform = 'scale(1.15)'; el.style.transition = 'transform 0.15s';
+    setTimeout(() => { el.style.transform = 'scale(1)'; el.style.transition = 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1)'; }, 150);
+  };
+  return (
+    <>
+      <style>{`
+        .cys-circle { transition: all 0.4s; }
+        .cys-logo-wrap:hover .circle-top { filter: url(#neonO) drop-shadow(0 0 12px rgba(249,115,22,0.9)); }
+        .cys-logo-wrap:hover .circle-bl  { filter: url(#neonG) drop-shadow(0 0 12px rgba(16,185,129,0.9)); }
+        .cys-logo-wrap:hover .circle-br  { filter: url(#neonB) drop-shadow(0 0 12px rgba(59,130,246,0.9)); }
+        .cys-logo-wrap:hover { transform: scale(1.06); }
+        .orbit-ring-anim { animation: orbitSpin 18s linear infinite; transform-origin: 70px 74px; }
+        @keyframes orbitSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        .orbit-dot-anim { animation: orbitDotMove 6s linear infinite; }
+        @keyframes orbitDotMove {
+          0%{transform:translate(70px,8px)} 25%{transform:translate(136px,74px)}
+          50%{transform:translate(70px,140px)} 75%{transform:translate(4px,74px)} 100%{transform:translate(70px,8px)}
+        }
+        .antenna-dot-anim { animation: antennaBlink 2s ease-in-out infinite; }
+        @keyframes antennaBlink { 0%,100%{opacity:.8} 50%{opacity:1;filter:drop-shadow(0 0 5px #00E5FF)} }
+        .icon-top-anim { animation: iconPulse 3s ease-in-out infinite; }
+        .icon-bl-anim  { animation: iconPulse 3s ease-in-out 1s infinite; }
+        .icon-br-anim  { animation: iconPulse 3s ease-in-out 2s infinite; }
+        @keyframes iconPulse { 0%,100%{opacity:1} 50%{opacity:.65} }
+      `}</style>
+      <div className="cys-logo-wrap relative cursor-pointer transition-transform duration-300" onClick={handleClick}>
+        <svg ref={svgRef} viewBox="-20 -20 180 188" width="108" height="108">
+          <defs>
+            <filter id="glowO" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="glowG" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="glowB" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="glowW" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="neonO" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4" result="blur"/><feFlood floodColor="#F97316" floodOpacity="0.7" result="color"/><feComposite in="color" in2="blur" operator="in" result="shadow"/><feMerge><feMergeNode in="shadow"/><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="neonG" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4" result="blur"/><feFlood floodColor="#10B981" floodOpacity="0.7" result="color"/><feComposite in="color" in2="blur" operator="in" result="shadow"/><feMerge><feMergeNode in="shadow"/><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="neonB" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4" result="blur"/><feFlood floodColor="#3B82F6" floodOpacity="0.7" result="color"/><feComposite in="color" in2="blur" operator="in" result="shadow"/><feMerge><feMergeNode in="shadow"/><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <circle cx="70" cy="74" r="66" fill="none" stroke="rgba(0,229,255,0.08)" strokeWidth="0.8" strokeDasharray="5 4" className="orbit-ring-anim"/>
+          <circle className="cys-circle circle-top" cx="70" cy="36" r="46" fill="rgba(249,115,22,0.09)" stroke="#F97316" strokeWidth="1.8" filter="url(#neonO)"/>
+          <g className="icon-top-anim" filter="url(#glowO)" transform="translate(70,30)">
+            <circle cx="-9" cy="-10" r="5.5" fill="none" stroke="#F97316" strokeWidth="1.6"/>
+            <path d="M-17,2 C-17,-5 -1,-5 -1,2" fill="rgba(249,115,22,0.14)" stroke="#F97316" strokeWidth="1.5" strokeLinecap="round"/>
+            <circle cx="9" cy="-10" r="5.5" fill="none" stroke="#F97316" strokeWidth="1.6"/>
+            <path d="M1,2 C1,-5 17,-5 17,2" fill="rgba(249,115,22,0.14)" stroke="#F97316" strokeWidth="1.5" strokeLinecap="round"/>
+          </g>
+          <circle className="cys-circle circle-bl" cx="40" cy="88" r="46" fill="rgba(16,185,129,0.09)" stroke="#10B981" strokeWidth="1.8" filter="url(#neonG)"/>
+          <g className="icon-bl-anim" filter="url(#glowG)" transform="translate(31,90)">
+            <rect x="-2" y="8" width="4" height="12" rx="1.5" fill="#10B981" opacity="0.9"/>
+            <polygon points="0,-14 -10,2 10,2" fill="rgba(16,185,129,0.16)" stroke="#10B981" strokeWidth="1.3"/>
+            <polygon points="0,-7 -10,8 10,8"  fill="rgba(16,185,129,0.22)" stroke="#10B981" strokeWidth="1.3"/>
+            <polygon points="0,0 -10,14 10,14" fill="rgba(16,185,129,0.30)" stroke="#10B981" strokeWidth="1.3"/>
+          </g>
+          <circle className="cys-circle circle-br" cx="100" cy="88" r="46" fill="rgba(59,130,246,0.09)" stroke="#3B82F6" strokeWidth="1.8" filter="url(#neonB)"/>
+          <g className="icon-br-anim" filter="url(#glowB)" transform="translate(109,90)">
+            <circle cx="0" cy="0" r="15" fill="rgba(59,130,246,0.12)" stroke="#3B82F6" strokeWidth="1.6"/>
+            <text x="0" y="6" textAnchor="middle" fontFamily="Georgia,serif" fontSize="20" fontWeight="bold" fill="#3B82F6" opacity={0.95}>$</text>
+          </g>
+          <g filter="url(#glowW)" transform="translate(70,72)">
+            <circle cx="0" cy="0" r="20" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.10)" strokeWidth="0.5"/>
+            <rect x="-9" y="-10" width="18" height="22" rx="0.5" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.75)" strokeWidth="1.2"/>
+            <rect x="-11" y="-13" width="22" height="5" rx="0.5" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.75)" strokeWidth="1.2"/>
+            <line x1="0" y1="-13" x2="0" y2="-18" stroke="rgba(255,255,255,0.55)" strokeWidth="1.2" strokeLinecap="round"/>
+            <circle cx="0" cy="-19" r="2" fill="#00E5FF" className="antenna-dot-anim"/>
+            <rect x="-8"  y="-8" width="5.5" height="4" rx="0.4" fill="rgba(0,229,255,0.42)"/>
+            <rect x="2.5" y="-8" width="5.5" height="4" rx="0.4" fill="rgba(0,229,255,0.42)"/>
+            <rect x="-8"  y="-2" width="5.5" height="4" rx="0.4" fill="rgba(0,229,255,0.26)"/>
+            <rect x="2.5" y="-2" width="5.5" height="4" rx="0.4" fill="rgba(0,229,255,0.26)"/>
+            <rect x="-3.5" y="4" width="7" height="8" rx="0.8" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.40)" strokeWidth="0.8"/>
+          </g>
+          <circle className="orbit-dot-anim" cx="0" cy="0" r="3" fill="#00E5FF" opacity="0.9"/>
+        </svg>
+        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg flex items-center justify-center"
+          style={{ background: T.bg3, border: `2px solid ${T.border2}` }}>
+          <div className="w-2.5 h-2.5 rounded-full bg-[#00E676] animate-pulse" />
+        </div>
+      </div>
+    </>
+  );
+};
+
+// ─── LAYER PILL ───────────────────────────────────────────────────────────────
+const LayerPill: React.FC<{
+  id: number; code: string; name: string;
+  isLocked: boolean; isCurrent: boolean; isCompleted: boolean;
+  onClick: () => void;
+}> = ({ id, code, name, isLocked, isCurrent, isCompleted, onClick }) => {
+  const color = LAYER_COLORS[id - 1] ?? T.cyan;
+  return (
+    <button disabled={isLocked} onClick={onClick}
+      className="w-full px-3 py-3 rounded-xl text-left transition-all duration-200 relative"
+      style={{
+        background: isCurrent ? `${color}12` : 'transparent',
+        border: `1px solid ${isCurrent ? color + '40' : 'transparent'}`,
         opacity: isLocked ? 0.25 : 1,
         cursor: isLocked ? 'not-allowed' : 'pointer',
-      }}
-    >
-      {isCurrent && (
-        <div className="absolute left-0 top-0 w-1 h-full rounded-l-2xl"
-          style={{ background: color, boxShadow: `0 0 12px ${color}` }} />
-      )}
+      }}>
+      {isCurrent && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-r-full" style={{ background: color }} />}
       <div className="flex items-center gap-3 pl-2">
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[9px] font-black transition-all"
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black flex-shrink-0"
           style={{
-            background: isCurrent ? color : 'rgba(255,255,255,0.05)',
-            color: isCurrent ? '#000' : 'rgba(255,255,255,0.3)',
-            boxShadow: isCurrent ? `0 0 12px ${color}` : 'none',
+            background: isCurrent ? color : isCompleted ? `${color}20` : 'rgba(255,255,255,0.05)',
+            color: isCurrent ? '#000' : isCompleted ? color : T.textDim,
+            fontSize: '11px',
           }}>
-          {isLocked ? <Lock size={10} /> : String(id).padStart(2, '0')}
+          {isLocked ? <Lock size={10} /> : isCompleted && !isCurrent ? '✓' : String(id).padStart(2,'0')}
         </div>
-        <div>
-          <div className="text-[9px] font-black uppercase tracking-[0.25em]"
-            style={{ color: isCurrent ? color : 'rgba(255,255,255,0.35)' }}>
-            {code}
-          </div>
-          {isCompleted && !isCurrent && (
-            <div className="text-[7px] font-bold tracking-widest mt-0.5" style={{ color: '#28a745' }}>
-              ✓ COMPLETADA
-            </div>
-          )}
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wider truncate" style={{ color: isCurrent ? color : isCompleted ? T.textMid : T.textDim }}>{code}</p>
+          <p className="text-xs truncate mt-0.5" style={{ color: T.textDim, fontSize: '10px' }}>{name}</p>
         </div>
       </div>
     </button>
@@ -127,131 +217,291 @@ const LayerPill: React.FC<LayerPillProps> = ({ id, code, isLocked, isCurrent, is
 };
 
 // ─── METRIC CARD ──────────────────────────────────────────────────────────────
-interface MetricCardProps { label: string; value: string; sub?: string; color?: string; icon?: React.ReactNode; }
-const MetricCard: React.FC<MetricCardProps> = ({ label, value, sub, color = '#00ffff', icon }) => (
-  <div className="bg-black/60 border border-white/5 rounded-3xl p-6 relative overflow-hidden group hover:border-white/10 transition-all">
-    <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-10 group-hover:opacity-20 transition-opacity"
-      style={{ background: color }} />
+const MetricCard: React.FC<{
+  label: string; value: string; sub?: string; color?: string; icon?: React.ReactNode;
+}> = ({ label, value, sub, color = T.cyan, icon }) => (
+  <div className="relative rounded-2xl p-6 overflow-hidden transition-all duration-300 hover:-translate-y-0.5"
+    style={{ background: T.bg2, border: `1px solid ${T.border}` }}>
+    <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-[0.07]" style={{ background: color }} />
     <div className="flex items-start justify-between mb-4">
-      <p className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-500">{label}</p>
-      {icon && <div style={{ color }}>{icon}</div>}
+      <p className="text-sm font-semibold uppercase tracking-widest" style={{ color: T.textMid }}>{label}</p>
+      {icon && <div style={{ color }} className="opacity-70">{icon}</div>}
     </div>
-    <p className="text-3xl font-black text-white tracking-tighter" style={{ textShadow: `0 0 20px ${color}40` }}>
-      {value}
-    </p>
-    {sub && <p className="text-[9px] font-bold mt-2" style={{ color }}>{sub}</p>}
+    <p className="text-4xl font-black tracking-tight" style={{ color: T.text }}>{value}</p>
+    {sub && <p className="text-sm font-semibold mt-2" style={{ color }}>{sub}</p>}
   </div>
 );
 
-// ─── AURON MESSAGE ────────────────────────────────────────────────────────────
+// ─── AURON MSG ────────────────────────────────────────────────────────────────
 const AuronMsg: React.FC<{ msg: ChatMsg }> = ({ msg }) => (
   <div className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-    <div className="w-6 h-6 rounded-lg flex-shrink-0 flex items-center justify-center text-[7px] font-black mt-1"
-      style={{
-        background: msg.role === 'auron' ? '#00ffff' : 'rgba(255,255,255,0.1)',
-        color: msg.role === 'auron' ? '#000' : '#fff',
-      }}>
-      {msg.role === 'auron' ? 'AI' : 'TÚ'}
+    <div className="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center text-sm font-black mt-0.5"
+      style={{ background: msg.role === 'auron' ? T.cyan : 'rgba(255,255,255,0.10)', color: msg.role === 'auron' ? '#000' : T.text }}>
+      {msg.role === 'auron' ? 'A' : 'U'}
     </div>
-    <div className="max-w-[85%] space-y-1">
-      <div className="px-5 py-4 rounded-2xl text-[11px] font-medium leading-relaxed"
+    <div className="max-w-[86%]">
+      {msg.role === 'auron' && <p className="text-xs font-black uppercase tracking-widest mb-2 px-1" style={{ color: T.cyan }}>AURON</p>}
+      <div className="px-4 py-3 rounded-2xl text-sm leading-relaxed"
         style={{
-          background: msg.role === 'auron' ? 'rgba(0,255,255,0.06)' : 'rgba(255,255,255,0.04)',
-          border: msg.role === 'auron' ? '1px solid rgba(0,255,255,0.15)' : '1px solid rgba(255,255,255,0.06)',
-          color: msg.role === 'auron' ? '#a0f0f0' : '#cbd5e1',
+          background: msg.role === 'auron' ? 'rgba(0,229,255,0.06)' : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${msg.role === 'auron' ? 'rgba(0,229,255,0.15)' : T.border}`,
+          color: msg.role === 'auron' ? '#A5D8E0' : T.textMid,
         }}>
-        {msg.role === 'auron' && (
-          <span className="text-[8px] font-black text-[#00ffff] tracking-widest block mb-2">AURON_CMD:</span>
-        )}
         {msg.text}
       </div>
-      <p className="text-[8px] text-slate-700 px-2">{msg.ts}</p>
+      <p className="text-xs mt-1 px-1" style={{ color: T.textDim }}>{msg.ts}</p>
     </div>
   </div>
 );
 
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
-const LoginScreen: React.FC<{ onLogin: (e: React.FormEvent) => void; email: string; setEmail: (v: string) => void }> = ({ onLogin, email, setEmail }) => (
-  <div className="min-h-screen bg-[#02040a] flex items-center justify-center relative overflow-hidden">
-    <CyberGrid />
-    <Scanline />
-    <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
-      <Brain size={600} className="text-[#00ffff]" />
-    </div>
-    <div className="relative z-10 w-full max-w-md px-8">
-      <div className="text-center mb-12">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl mb-6"
-          style={{ background: '#00ffff', boxShadow: '0 0 60px #00ffff60' }}>
-          <ShieldCheck size={36} className="text-black" />
+type Theme = 'dark' | 'light';
+
+const DARK_T = {
+  bg:'#06090F', bg2:'#0A0E18', bg3:'#0F1420',
+  bgCard:'rgba(10,14,24,0.97)',
+  border:'rgba(255,255,255,0.06)', border2:'rgba(255,255,255,0.12)',
+  cyan:'#00E5FF', cyanGlow:'rgba(0,229,255,0.20)', cyanRing:'rgba(0,229,255,0.10)',
+  green:'#00E676', text:'#F1F5F9', textMid:'#94A3B8', textDim:'#475569',
+  error:'#FF3D57', shadow:'0 40px 100px rgba(0,0,0,0.60)',
+  mesh1:'rgba(0,229,255,0.07)', mesh2:'rgba(124,77,255,0.05)',
+  grid:'rgba(0,229,255,0.02)', ring:'rgba(0,229,255,0.04)',
+};
+const LIGHT_T = {
+  bg:'#F0F4FA', bg2:'#FFFFFF', bg3:'#E8EEF6',
+  bgCard:'rgba(255,255,255,0.98)',
+  border:'rgba(0,0,0,0.07)', border2:'rgba(0,0,0,0.14)',
+  cyan:'#0088BB', cyanGlow:'rgba(0,136,187,0.15)', cyanRing:'rgba(0,136,187,0.10)',
+  green:'#00875A', text:'#0F172A', textMid:'#475569', textDim:'#94A3B8',
+  error:'#DC2626', shadow:'0 24px 80px rgba(0,0,0,0.12)',
+  mesh1:'rgba(0,136,187,0.06)', mesh2:'rgba(124,77,255,0.04)',
+  grid:'rgba(0,136,187,0.03)', ring:'rgba(0,136,187,0.03)',
+};
+
+const LoginScreen: React.FC<{ email: string; setEmail: (v: string) => void }> = ({ email, setEmail }) => {
+  const { t, i18n } = useTranslation();
+  const [sent, setSent]       = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError]     = React.useState('');
+  const [focused, setFocused] = React.useState(false);
+  const [theme, setTheme]     = React.useState<Theme>(() =>
+    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  );
+
+  const C = theme === 'dark' ? DARK_T : LIGHT_T;
+  const currentLang = i18n.language.slice(0, 2);
+
+  React.useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const h = (e: MediaQueryListEvent) => setTheme(e.matches ? 'dark' : 'light');
+    mq.addEventListener('change', h);
+    return () => mq.removeEventListener('change', h);
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !email.includes('@')) { setError(t('auth.errorEmail')); return; }
+    setError(''); setLoading(true);
+    try {
+      const { error: supaErr } = await supabase.auth.signInWithOtp({ email });
+      if (supaErr) throw supaErr;
+      setSent(true);
+    } catch (err: any) {
+      setError(err.message ?? t('auth.errorGeneric'));
+    } finally { setLoading(false); }
+  };
+
+  const rings = [320, 500, 680, 860];
+
+  return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden', background:C.bg, transition:'background 0.4s' }}>
+
+      {/* Mesh background */}
+      <div style={{ pointerEvents:'none', position:'fixed', inset:0, zIndex:0, overflow:'hidden' }}>
+        <div style={{ position:'absolute', top:-160, left:-160, width:700, height:700, borderRadius:'50%', background:'radial-gradient(circle, ' + C.mesh1 + ' 0%, transparent 70%)' }}/>
+        <div style={{ position:'absolute', bottom:-240, right:-240, width:800, height:800, borderRadius:'50%', background:'radial-gradient(circle, ' + C.mesh2 + ' 0%, transparent 70%)' }}/>
+        <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(' + C.grid + ' 1px, transparent 1px), linear-gradient(90deg, ' + C.grid + ' 1px, transparent 1px)', backgroundSize:'80px 80px' }}/>
+        <div style={{ position:'absolute', left:'50%', top:'50%', transform:'translate(-50%,-50%)' }}>
+          {rings.map((size, i) => (
+            <div key={size} style={{ position:'absolute', borderRadius:'50%', width:size, height:size, top:-size/2, left:-size/2, border:'1px solid ' + C.ring, animation:'loginSpin ' + (22+i*8) + 's linear infinite ' + (i%2===0?'':'reverse') }}/>
+          ))}
         </div>
-        <h1 className="text-5xl font-black tracking-tighter text-white italic mb-2">
-          Simplifica<span style={{ color: '#00ffff' }}>ME</span>
+      </div>
+
+      {/* Top-right controls */}
+      <div style={{ position:'fixed', top:20, right:20, zIndex:100, display:'flex', alignItems:'center', gap:8 }}>
+        {/* Theme toggle */}
+        <button
+          onClick={() => setTheme(th => th === 'dark' ? 'light' : 'dark')}
+          title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+          style={{ width:40, height:40, borderRadius:12, border:'1px solid ' + C.border2, background:C.bg2, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, transition:'all 0.2s' }}>
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
+        {/* Lang switcher */}
+        <div style={{ display:'flex', alignItems:'center', gap:2, padding:4, borderRadius:12, background:C.bg2, border:'1px solid ' + C.border2 }}>
+          {(['es','en']).map(lang => {
+            const isActive = currentLang === lang;
+            return (
+              <button key={lang} onClick={() => applyPreferredLang(lang)}
+                style={{ padding:'5px 11px', borderRadius:9, border:'none', cursor:'pointer', fontSize:11, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase' as const, transition:'all 0.15s', background:isActive ? C.cyan : 'transparent', color:isActive ? '#000' : C.textDim }}>
+                {lang.toUpperCase()}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div style={{ position:'relative', zIndex:10, width:'100%', maxWidth:400, padding:'0 24px', display:'flex', flexDirection:'column', alignItems:'center', animation:'loginFadeIn 0.6s ease both' }}>
+
+        {/* Logo */}
+        <div style={{ marginBottom:24 }}>
+          <CYSLogo />
+        </div>
+
+        {/* Brand */}
+        <p style={{ fontSize:11, fontWeight:700, letterSpacing:'0.4em', textTransform:'uppercase' as const, color:C.textMid, marginBottom:12, textAlign:'center' }}>
+          {t('brand.company')}
+        </p>
+        <h1 style={{ fontFamily:"'Syne', sans-serif", fontSize:'clamp(40px,10vw,54px)', fontWeight:900, letterSpacing:'-0.02em', lineHeight:1, textAlign:'center', margin:'0 0 8px', color:C.text }}>
+          Arquitectura
+          <span style={{ color:C.cyan, filter:'drop-shadow(0 0 24px ' + C.cyanGlow + ')' }}>ME</span>
+          <sup style={{ fontSize:20, fontWeight:700, color:C.textDim, verticalAlign:'super' }}>™</sup>
         </h1>
-        <p className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-500">
-          AFSE NeuroCode Ultra · Sistema Estratégico
+        <p style={{ fontSize:11, fontWeight:700, letterSpacing:'0.35em', textTransform:'uppercase' as const, color:C.textDim, marginBottom:32 }}>
+          {t('brand.tagline')}
         </p>
-      </div>
-      <div className="bg-black/80 border border-white/10 rounded-3xl p-8 backdrop-blur-xl"
-        style={{ boxShadow: '0 0 80px rgba(0,255,255,0.05)' }}>
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6 text-center">
-          Acceso via Magic Link
-        </p>
-        <form onSubmit={onLogin} className="space-y-4">
-          <input
-            type="email" value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="director@empresa.com"
-            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-[12px] text-white outline-none focus:border-[#00ffff]/50 transition-colors placeholder:text-slate-700 font-mono"
-          />
-          <button type="submit"
-            className="w-full py-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] text-black transition-all hover:scale-[1.02] active:scale-[0.98]"
-            style={{ background: '#00ffff', boxShadow: '0 0 30px #00ffff40' }}>
-            Solicitar Acceso
-          </button>
-        </form>
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#28a745] animate-pulse" />
-          <span className="text-[9px] text-slate-600 font-mono uppercase tracking-widest">
-            Sistema Operacional · Cifrado E2E
-          </span>
+
+        {/* Card */}
+        <div style={{ width:'100%', borderRadius:24, padding:32, background:C.bgCard, border:'1px solid ' + C.border2, boxShadow:C.shadow, backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)' }}>
+
+          {/* Card header */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginBottom:24 }}>
+            <div style={{ height:1, flex:1, background:C.border2 }}/>
+            <p style={{ fontSize:10, fontWeight:700, letterSpacing:'0.3em', textTransform:'uppercase' as const, color:C.textMid, whiteSpace:'nowrap' }}>
+              {t('auth.access')}
+            </p>
+            <div style={{ height:1, flex:1, background:C.border2 }}/>
+          </div>
+
+          {!sent ? (
+            <form onSubmit={handleSubmit}>
+              {/* Floating label input */}
+              <div style={{ marginBottom:16, position:'relative' }}>
+                <label style={{
+                  position:'absolute', left:16,
+                  top: focused || email ? 10 : '50%',
+                  transform: focused || email ? 'translateY(0) scale(0.75)' : 'translateY(-50%) scale(1)',
+                  transformOrigin:'left',
+                  fontSize:14, fontWeight:600,
+                  color: focused ? C.cyan : C.textDim,
+                  transition:'all 0.2s', pointerEvents:'none', zIndex:1,
+                }}>
+                  {t('auth.placeholder')}
+                </label>
+                <input
+                  type="email" value={email}
+                  onChange={e => { setEmail(e.target.value); setError(''); }}
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setFocused(false)}
+                  disabled={loading}
+                  style={{
+                    width:'100%', borderRadius:14,
+                    padding: email || focused ? '24px 16px 10px' : '17px 16px',
+                    fontSize:15, outline:'none', boxSizing:'border-box' as const,
+                    background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                    border: '1.5px solid ' + (error ? C.error : focused ? C.cyan : C.border2),
+                    color:C.text, caretColor:C.cyan, transition:'all 0.2s',
+                    boxShadow: focused ? '0 0 0 4px ' + C.cyanRing : 'none',
+                  }}
+                />
+                {error && (
+                  <p style={{ fontSize:12, fontWeight:600, color:C.error, marginTop:6, paddingLeft:4 }}>
+                    ⚠ {error}
+                  </p>
+                )}
+              </div>
+
+              {/* Submit */}
+              <button type="submit" disabled={loading}
+                style={{ width:'100%', padding:'15px 24px', borderRadius:14, fontSize:13, fontWeight:900, letterSpacing:'0.12em', textTransform:'uppercase' as const, color:'#000', background:C.cyan, border:'none', cursor:loading?'not-allowed':'pointer', boxShadow:'0 6px 28px ' + C.cyanGlow, transition:'all 0.2s', opacity:loading?0.7:1 }}>
+                {loading ? t('auth.sending') : t('auth.submit')}
+              </button>
+
+              {/* Security */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginTop:18 }}>
+                <div style={{ width:7, height:7, borderRadius:'50%', background:C.green, animation:'lgPulse 2s ease-in-out infinite' }}/>
+                <span style={{ fontSize:12, fontWeight:600, color:C.textDim }}>{t('auth.security')}</span>
+              </div>
+            </form>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:16, padding:'8px 0', textAlign:'center', animation:'loginFadeIn 0.4s ease both' }}>
+              <div style={{ width:60, height:60, borderRadius:18, display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, background:'rgba(0,230,118,0.10)', border:'1px solid rgba(0,230,118,0.25)' }}>✉️</div>
+              <p style={{ fontSize:16, fontWeight:900, letterSpacing:'0.1em', textTransform:'uppercase' as const, color:C.green }}>{t('auth.sentTitle')}</p>
+              <p style={{ fontSize:14, lineHeight:1.7, color:C.textMid }}>
+                {t('auth.sentBody')}<br/>
+                <span style={{ fontWeight:700, color:C.cyan }}>{email}</span>
+              </p>
+              <p style={{ fontSize:12, color:C.textDim }}>{t('auth.sentExpiry')}</p>
+              <button onClick={() => { setSent(false); setEmail(''); }}
+                style={{ fontSize:12, fontWeight:600, color:C.textDim, background:'none', border:'none', cursor:'pointer' }}>
+                {t('auth.backButton')}
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* Footer */}
+        <p style={{ textAlign:'center', fontSize:13, fontWeight:500, marginTop:24, lineHeight:1.8, color:C.textDim }}>
+          {t('brand.slogan')}<br/>
+          <span style={{ color:C.cyan, fontWeight:700 }}>{t('brand.sloganAccent')}</span>
+        </p>
       </div>
+
+      <style>{`
+        @keyframes loginSpin   { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes loginFadeIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes lgPulse     { 0%,100%{opacity:.7} 50%{opacity:1} }
+        @keyframes spin        { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+      `}</style>
     </div>
-  </div>
-);
+  );
+};
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 const App = () => {
-  const [sessionUser, setSessionUser]           = useState<User | null>(null);
-  const [loading, setLoading]                   = useState(true);
-  const [loginEmail, setLoginEmail]             = useState("");
-  const [company, setCompany]                   = useState<Company | null>(null);
-  const [cycle, setCycle]                       = useState<AfseCycle | null>(null);
-  const [activePhase, setActivePhase]           = useState(1);
-  const [maxPhaseReached, setMaxPhaseReached]   = useState(1);
-  const [userData, setUserData]                 = useState<Record<string, string>>({});
-  const [messages, setMessages]                 = useState<ChatMsg[]>([]);
-  const [input, setInput]                       = useState("");
-  const [auronLoading, setAuronLoading]         = useState(false);
-  const [activeView, setActiveView]             = useState<'workspace' | 'dashboard'>('workspace');
+  const { t } = useTranslation();
+  const ME_MODULES = useMEModules(t);
+
+  const [sessionUser, setSessionUser]         = useState<User | null>(null);
+  const [loading, setLoading]                 = useState(true);
+  const [loginEmail, setLoginEmail]           = useState('');
+  const [urlPlan]                             = useState(() => new URLSearchParams(window.location.search).get('plan'));
+  const [showSignup, setShowSignup]           = useState(!!urlPlan);
+  const [company, setCompany]                 = useState<Company | null>(null);
+  const [cycle, setCycle]                     = useState<AfseCycle | null>(null);
+  const [activePhase, setActivePhase]         = useState(1);
+  const [maxPhaseReached, setMaxPhaseReached] = useState(1);
+  const [userData, setUserData]               = useState<Record<string, string>>({});
+  const [messages, setMessages]               = useState<ChatMsg[]>([]);
+  const [input, setInput]                     = useState('');
+  const [auronLoading, setAuronLoading]       = useState(false);
+  const [activeView, setActiveView]           = useState<ActiveView>('hub');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const chatEndRef                              = useRef<HTMLDivElement>(null);
+  const [isSuperAdmin, setIsSuperAdmin]       = useState(false);
+  const [isListening, setIsListening]         = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const currentLayer  = useMemo(() => getLayerById(activePhase), [activePhase]);
-  const layers        = useMemo(() => getAllLayers(), []);
-  const afseScore     = company?.afse_score ?? 0;
-  const afseStatus    = getAfseStatus(afseScore);
-
-  // Sparkline data mock (replace with real data from Supabase)
-  const sparkData = useMemo(() => layers.map((l, i) => ({
-    name: l.code,
-    value: l.id <= maxPhaseReached ? Math.min(100, 40 + i * 12) : 0,
+  const currentLayer = useMemo(() => getLayerById(activePhase), [activePhase]);
+  const layers       = useMemo(() => getAllLayers(), []);
+  const afseScore    = company?.afse_score ?? 0;
+  const afseStatus   = getAfseStatus(afseScore, t);
+  const sparkData    = useMemo(() => layers.map((l, i) => ({
+    name: l.code, value: l.id <= maxPhaseReached ? Math.min(100, 40 + i * 12) : 0,
   })), [layers, maxPhaseReached]);
-
   const radialData = [{ name: 'AFSE', value: afseScore, fill: afseStatus.color }];
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -265,19 +515,28 @@ const App = () => {
   useEffect(() => {
     if (!sessionUser) return;
     (async () => {
+      const { data: adminCheck } = await supabase.rpc('is_super_admin');
+      setIsSuperAdmin(!!adminCheck);
       const userCompany = await getUserCompany(sessionUser.id);
       if (!userCompany) return;
       setCompany(userCompany);
+
+      // ← Aplicar idioma preferido del perfil
+      const { data: member } = await supabase
+        .from('company_members')
+        .select('preferred_lang')
+        .eq('user_id', sessionUser.id)
+        .single();
+      await applyPreferredLang(member?.preferred_lang);
+
       const activeCycle = await getActiveCycle(userCompany.id);
       if (!activeCycle) return;
       setCycle(activeCycle);
       const { activePhase: ap, maxPhase: mp } = await getActivePhase(userCompany.id, activeCycle.id);
-      setActivePhase(ap);
-      setMaxPhaseReached(mp);
-      // Mensaje de bienvenida AURON
+      setActivePhase(ap); setMaxPhaseReached(mp);
       setMessages([{
         role: 'auron',
-        text: `Sincronización completa. Empresa: ${userCompany.name}. Ciclo AFSE activo. Capa ${String(ap).padStart(2,'0')} en curso. Score actual: ${userCompany.afse_score?.toFixed(0) ?? '0'}/100. Listo para operar, Director.`,
+        text: t('auron:greeting', { company: userCompany.name, layer: String(ap).padStart(2,'0'), score: userCompany.afse_score?.toFixed(0) ?? '0' }),
         ts: new Date().toLocaleTimeString('es-CO'),
       }]);
     })();
@@ -290,8 +549,8 @@ const App = () => {
 
   useEffect(() => {
     if (!sessionUser || !company || !cycle || Object.keys(userData).length === 0) return;
-    const t = setTimeout(() => persistProgress(activePhase), 1500);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => persistProgress(activePhase), 1500);
+    return () => clearTimeout(timer);
   }, [userData]);
 
   const handleConsultation = async (e: React.FormEvent) => {
@@ -300,15 +559,15 @@ const App = () => {
     const userText = input.trim();
     const ts = new Date().toLocaleTimeString('es-CO');
     setMessages(prev => [...prev, { role: 'user', text: userText, ts }]);
-    setInput("");
-    setAuronLoading(true);
+    setInput(''); setAuronLoading(true);
     if (company && cycle) await saveAuronMessage(company.id, cycle.id, sessionUser.id, activePhase, 'user', userText);
     try {
-      const isTryingToAdvance = /siguiente|avanzar|cerrar capa/i.test(userText);
+      // Detectar intención de avance (ES + EN)
+      const isTryingToAdvance = /siguiente|avanzar|cerrar capa|advance|next|close layer/i.test(userText);
       if (isTryingToAdvance) {
         const isValid = validateLayer(currentLayer, userData);
         if (!isValid) {
-          const text = `Director, no puedo validar la Capa ${String(activePhase).padStart(2,'0')}. Outputs críticos pendientes: ${currentLayer.outputs.join(', ').toUpperCase()}.`;
+          const text = t('auron:layerNotValid', { layer: String(activePhase).padStart(2,'00'), outputs: currentLayer.outputs.join(', ').toUpperCase() });
           setMessages(prev => [...prev, { role: 'auron', text, ts: new Date().toLocaleTimeString('es-CO') }]);
           if (company && cycle) await saveAuronMessage(company.id, cycle.id, sessionUser.id, activePhase, 'auron', text);
           return;
@@ -319,7 +578,7 @@ const App = () => {
           setMaxPhaseReached(nextPhase);
           if (company && cycle) await saveLayerProgress(sessionUser.id, company.id, cycle.id, activePhase, currentLayer.code, { fields: userData, completedAt: new Date().toISOString() }, 100);
         }
-        const text = `Gobernanza validada. Capa ${String(activePhase).padStart(2,'0')} cerrada con éxito. Desbloqueando Fase ${String(nextPhase).padStart(2,'0')}...`;
+        const text = t('auron:layerClosed', { layer: String(activePhase).padStart(2,'0'), next: String(nextPhase).padStart(2,'0') });
         setMessages(prev => [...prev, { role: 'auron', text, ts: new Date().toLocaleTimeString('es-CO') }]);
         if (company && cycle) await saveAuronMessage(company.id, cycle.id, sessionUser.id, activePhase, 'auron', text);
         return;
@@ -331,505 +590,600 @@ const App = () => {
       const auronTs = new Date().toLocaleTimeString('es-CO');
       setMessages(prev => [...prev, { role: 'auron', text: response, ts: auronTs }]);
       if (company && cycle) await saveAuronMessage(company.id, cycle.id, sessionUser.id, activePhase, 'auron', response);
-    } catch {
-      setMessages(prev => [...prev, { role: 'auron', text: 'Error de enlace con AURON. Reintentando...', ts: new Date().toLocaleTimeString('es-CO') }]);
-    } finally {
-      setAuronLoading(false);
-    }
+    } catch (err) {
+      // Exponemos el error real para depuración fácil del lado del CEO
+      const errorMessage = err instanceof Error ? err.message : t('auron:connectionError');
+      setMessages(prev => [...prev, { 
+        role: 'auron', 
+        text: `⚠️ ERROR: ${errorMessage}`, 
+        ts: new Date().toLocaleTimeString('es-CO') 
+      }]);
+    } finally { setAuronLoading(false); }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!loginEmail.trim()) return;
-    await supabase.auth.signInWithOtp({ email: loginEmail });
-    alert(`Magic link enviado a ${loginEmail}`);
-  };
-
+  // ── LOADING ──────────────────────────────────────────────────────────────────
   if (loading) return (
-    <div className="h-screen bg-[#02040a] flex items-center justify-center">
-      <div className="flex flex-col items-center gap-5">
-        <div className="relative">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-            style={{ background: '#00ffff', boxShadow: '0 0 40px #00ffff' }}>
-            <Activity size={28} className="text-black animate-pulse" />
-          </div>
+    <div className="h-screen flex items-center justify-center" style={{ background: T.bg }}>
+      <BackgroundMesh />
+      <div className="relative z-10 flex flex-col items-center gap-6">
+        <div className="w-20 h-20 rounded-3xl flex items-center justify-center"
+          style={{ background: T.cyan, boxShadow: `0 0 60px rgba(0,229,255,0.5)` }}>
+          <Activity size={36} className="text-black animate-pulse" />
         </div>
-        <div className="text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.6em] text-[#00ffff]">
-            Iniciando AFSE OS
-          </p>
-          <div className="flex gap-1 justify-center mt-3">
-            {[0,1,2].map(i => (
-              <div key={i} className="w-1.5 h-1.5 rounded-full bg-[#00ffff] animate-bounce"
-                style={{ animationDelay: `${i * 0.15}s` }} />
-            ))}
-          </div>
+        <p className="text-lg font-bold uppercase tracking-widest" style={{ color: T.cyan }}>
+          {t('status.loading')}
+        </p>
+        <div className="flex gap-2">
+          {[0,1,2].map(i => (
+            <div key={i} className="w-2 h-2 rounded-full animate-bounce"
+              style={{ background: T.cyan, animationDelay: `${i * 0.15}s` }} />
+          ))}
         </div>
       </div>
     </div>
   );
 
-  if (!sessionUser) return <LoginScreen onLogin={handleLogin} email={loginEmail} setEmail={setLoginEmail} />;
+  // ── LOGIN / SIGNUP ─────────────────────────────────────────────────────────────
+  if (!sessionUser) {
+    if (showSignup || urlPlan) {
+      return <SignupScreen initialPlan={urlPlan || 'esencial'} onBackToLogin={() => setShowSignup(false)} />;
+    }
+    return <LoginScreen email={loginEmail} setEmail={setLoginEmail} />;
+  }
 
-  return (
-    <div className="min-h-screen bg-[#02040a] text-slate-300 overflow-hidden flex flex-col"
-      style={{ fontFamily: "'JetBrains Mono', 'Courier New', monospace" }}>
-      <CyberGrid />
-      <Scanline />
-
-      {/* ── TOPBAR ──────────────────────────────────────────────────────────── */}
-      <header className="relative z-50 h-16 border-b border-white/5 px-6 flex items-center justify-between"
-        style={{ background: 'rgba(2,4,10,0.95)', backdropFilter: 'blur(20px)' }}>
-
-        {/* Logo */}
+  // ── ADMIN ────────────────────────────────────────────────────────────────────
+  if (activeView === 'admin') return (
+    <div className="min-h-screen flex flex-col" style={{ background: T.bg }}>
+      <BackgroundMesh />
+      <header className="relative z-50 h-16 border-b px-8 flex items-center justify-between"
+        style={{ background: 'rgba(6,9,15,0.95)', backdropFilter: 'blur(20px)', borderColor: T.border }}>
+        <button onClick={() => setActiveView('hub')} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: T.cyan }}>
+            <ShieldCheck size={18} className="text-black" />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-lg font-black" style={{ color: T.text }}>Arquitectura</span>
+            <span className="text-lg font-black" style={{ color: T.cyan }}>ME</span>
+            <span className="text-sm font-semibold ml-2" style={{ color: T.textDim }}>{t('nav.back')}</span>
+          </div>
+        </button>
+        <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl"
+          style={{ background: 'rgba(255,61,87,0.08)', border: '1px solid rgba(255,61,87,0.20)' }}>
+          <Settings size={14} className="text-red-400" />
+          <span className="text-sm font-black uppercase tracking-wider text-red-400">{t('platform:admin.label')}</span>
+        </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => setSidebarCollapsed(p => !p)}
-            className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-            <Network size={14} className="text-slate-400" />
+          <LanguageSwitcher userId={sessionUser.id} />
+          <button onClick={() => supabase.auth.signOut()} style={{ color: T.textDim }} className="hover:text-red-400 transition-colors">
+            <LogOut size={18} />
           </button>
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: '#00ffff', boxShadow: '0 0 20px #00ffff60' }}>
-            <ShieldCheck size={16} className="text-black" />
-          </div>
-          <div>
-            <h1 className="text-sm font-black tracking-tight text-white italic">
-              Simplifica<span style={{ color: '#00ffff' }}>ME</span>
-            </h1>
-            <p className="text-[7px] font-black uppercase tracking-[0.4em] text-slate-600 -mt-0.5">
-              {company?.name ?? 'AFSE NeuroCode Ultra'}
-            </p>
-          </div>
+        </div>
+      </header>
+      <div className="flex-1 relative z-10"><SuperAdminPanel /></div>
+    </div>
+  );
+
+  const completedLayers = maxPhaseReached - 1;
+  const progressPct = Math.round((completedLayers / 8) * 100);
+
+  // ── MAIN LAYOUT ──────────────────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen flex flex-col overflow-hidden" style={{ background: T.bg, color: T.text }}>
+      <BackgroundMesh />
+
+      {/* TOPBAR */}
+      <header className="relative z-50 h-16 border-b flex items-center px-6 gap-4"
+        style={{ background: 'rgba(6,9,15,0.95)', backdropFilter: 'blur(20px)', borderColor: T.border }}>
+        <div className="flex items-center gap-3">
+          {activeView !== 'hub' && (
+            <button onClick={() => setSidebarCollapsed(p => !p)}
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors hover:bg-white/5"
+              style={{ border: `1px solid ${T.border}` }}>
+              <Network size={16} style={{ color: T.textMid }} />
+            </button>
+          )}
+          <button onClick={() => setActiveView('hub')} className="flex items-center gap-2.5 hover:opacity-70 transition-opacity">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: T.cyan }}>
+              <ShieldCheck size={16} className="text-black" strokeWidth={2.5} />
+            </div>
+            <div className="hidden sm:flex items-center gap-1">
+              <span className="text-base font-black" style={{ color: T.text }}>Arquitectura</span>
+              <span className="text-base font-black" style={{ color: T.cyan }}>ME</span>
+            </div>
+          </button>
         </div>
 
-        {/* Nav */}
-        <div className="hidden md:flex items-center gap-1">
-          {[
-            { id: 'workspace', label: 'Workspace', icon: <Target size={12} /> },
-            { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 size={12} /> },
-          ].map(v => (
-            <button key={v.id}
-              onClick={() => setActiveView(v.id as 'workspace' | 'dashboard')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
+        <div className="flex-1 flex items-center justify-center gap-1.5">
+          {([
+            { id: 'hub',       label: t('nav.hub'),       icon: <Layers   size={14} /> },
+            { id: 'workspace', label: t('nav.workspace'), icon: <Target   size={14} /> },
+            { id: 'dashboard', label: t('nav.dashboard'), icon: <BarChart3 size={14} /> },
+          ] as const).map(v => (
+            <button key={v.id} onClick={() => setActiveView(v.id)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold uppercase tracking-widest transition-all"
               style={{
-                background: activeView === v.id ? 'rgba(0,255,255,0.1)' : 'transparent',
-                color: activeView === v.id ? '#00ffff' : 'rgba(255,255,255,0.3)',
-                border: activeView === v.id ? '1px solid rgba(0,255,255,0.2)' : '1px solid transparent',
+                background: activeView === v.id ? `${T.cyan}12` : 'transparent',
+                color: activeView === v.id ? T.cyan : T.textDim,
+                border: `1px solid ${activeView === v.id ? T.cyan + '30' : 'transparent'}`,
               }}>
               {v.icon}{v.label}
             </button>
           ))}
+          {isSuperAdmin && (
+            <button onClick={() => setActiveView('admin')}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold uppercase tracking-widest transition-all ml-2"
+              style={{ background: 'rgba(255,61,87,0.08)', color: '#f87171', border: '1px solid rgba(255,61,87,0.18)' }}>
+              <Settings size={14} /> {t('nav.admin')}
+            </button>
+          )}
         </div>
 
-        {/* Right */}
         <div className="flex items-center gap-3">
-          {/* AFSE Score pill */}
-          <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl border"
-            style={{ background: `${afseStatus.color}10`, borderColor: `${afseStatus.color}30` }}>
-            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: afseStatus.color }} />
-            <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: afseStatus.color }}>
-              AFSE {afseScore.toFixed(0)}/100
-            </span>
-            <span className="text-[8px] font-black" style={{ color: afseStatus.color }}>
-              {afseStatus.label}
+          <LanguageSwitcher userId={sessionUser.id} />
+          <div className="hidden sm:flex items-center gap-2.5 px-4 py-2 rounded-xl"
+            style={{ background: `${afseStatus.color}08`, border: `1px solid ${afseStatus.color}20` }}>
+            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: afseStatus.color }} />
+            <span className="text-sm font-bold uppercase tracking-wider" style={{ color: afseStatus.color }}>
+              {afseScore.toFixed(0)}/100 · {afseStatus.label}
             </span>
           </div>
-
-          {/* User */}
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5">
-            <div className="w-5 h-5 rounded-lg bg-[#00ffff] flex items-center justify-center text-[7px] font-black text-black">
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
+            style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.border}` }}>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-black text-black" style={{ background: T.cyan }}>
               {sessionUser.email?.[0]?.toUpperCase() ?? 'D'}
             </div>
-            <span className="text-[9px] font-bold text-slate-400 hidden md:block max-w-[120px] truncate">
+            <span className="text-sm hidden md:block max-w-[120px] truncate" style={{ color: T.textMid }}>
               {sessionUser.email}
             </span>
-            <button onClick={() => supabase.auth.signOut()}
-              className="hover:text-[#ff0055] transition-colors text-slate-600 ml-1">
-              <LogOut size={13} />
+            <button onClick={() => supabase.auth.signOut()} className="ml-1 hover:text-red-400 transition-colors" style={{ color: T.textDim }}>
+              <LogOut size={14} />
             </button>
           </div>
         </div>
       </header>
 
-      {/* ── MAIN BODY ───────────────────────────────────────────────────────── */}
+      {/* BODY */}
       <div className="flex flex-1 overflow-hidden relative z-10">
 
-        {/* ── SIDEBAR ─────────────────────────────────────────────────────── */}
-        <aside className="flex-shrink-0 border-r border-white/5 flex flex-col overflow-hidden transition-all duration-300"
-          style={{
-            width: sidebarCollapsed ? '0px' : '200px',
-            background: 'rgba(2,4,10,0.8)',
-          }}>
-          <div className="flex-1 overflow-y-auto p-3 space-y-1.5 w-[200px]">
-            {/* Score radial mini */}
-            <div className="p-4 rounded-2xl mb-4"
-              style={{ background: `${afseStatus.color}08`, border: `1px solid ${afseStatus.color}20` }}>
-              <div className="h-24">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadialBarChart cx="50%" cy="50%" innerRadius="55%" outerRadius="80%"
-                    data={radialData} startAngle={90} endAngle={90 - (360 * afseScore / 100)}>
-                    <RadialBar dataKey="value" cornerRadius={10} />
-                  </RadialBarChart>
-                </ResponsiveContainer>
+        {/* SIDEBAR */}
+        {activeView !== 'hub' && (
+          <aside className="flex-shrink-0 border-r flex flex-col overflow-hidden transition-all duration-200"
+            style={{ width: sidebarCollapsed ? '0px' : '220px', background: 'rgba(6,9,15,0.85)', borderColor: T.border }}>
+            <div className="flex-1 overflow-y-auto p-4 space-y-1 w-[220px]">
+              <div className="p-4 rounded-2xl mb-2" style={{ background: `${afseStatus.color}06`, border: `1px solid ${afseStatus.color}15` }}>
+                <div className="h-24">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadialBarChart cx="50%" cy="50%" innerRadius="55%" outerRadius="82%"
+                      data={radialData} startAngle={90} endAngle={90 - (360 * afseScore / 100)}>
+                      <RadialBar dataKey="value" cornerRadius={8} />
+                    </RadialBarChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-center text-base font-black mt-1" style={{ color: afseStatus.color }}>{afseScore.toFixed(0)}/100</p>
+                <p className="text-center text-xs font-bold uppercase tracking-wider mt-0.5" style={{ color: T.textDim }}>{t('afse:score.label')}</p>
               </div>
-              <p className="text-center text-[8px] font-black uppercase tracking-[0.3em]"
-                style={{ color: afseStatus.color }}>
-                Score {afseScore.toFixed(0)}/100
-              </p>
+              <p className="text-xs font-bold uppercase tracking-widest px-3 py-2" style={{ color: T.textDim }}>{t('afse:layers.title')}</p>
+              {layers.map(l => (
+                <LayerPill key={l.id} id={l.id} code={l.code} name={l.name}
+                  isLocked={l.id > maxPhaseReached} isCurrent={l.id === activePhase} isCompleted={l.id < maxPhaseReached}
+                  onClick={() => { setActivePhase(l.id); setActiveView('workspace'); }} />
+              ))}
             </div>
+            <div className="p-4 border-t" style={{ borderColor: T.border }}>
+              <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
+                style={{ background: 'rgba(0,230,118,0.06)', border: '1px solid rgba(0,230,118,0.12)' }}>
+                <div className="w-2 h-2 rounded-full bg-[#00E676] animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: T.textMid }}>{t('status.online')}</span>
+              </div>
+            </div>
+          </aside>
+        )}
 
-            <p className="text-[7px] font-black uppercase tracking-[0.4em] text-slate-700 px-2 pb-1">
-              Capas AFSE
-            </p>
-            {layers.map(l => (
-              <LayerPill
-                key={l.id} id={l.id} code={l.code}
-                isLocked={l.id > maxPhaseReached}
-                isCurrent={l.id === activePhase}
-                isCompleted={l.id < maxPhaseReached}
-                onClick={() => { setActivePhase(l.id); setActiveView('workspace'); }}
-              />
-            ))}
-          </div>
+        {/* HUB */}
+        {activeView === 'hub' && (
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-5xl mx-auto px-8 py-14 space-y-14">
+              <div className="text-center space-y-6">
+                <p className="text-sm font-bold uppercase tracking-[0.5em]" style={{ color: T.textDim }}>
+                  {company?.name ?? t('brand.company')}
+                </p>
+                <h1 className="text-7xl font-black tracking-tight leading-none">
+                  <span style={{ color: T.text }}>Arquitectura</span>
+                  <span style={{ color: T.cyan, filter: 'drop-shadow(0 0 40px rgba(0,229,255,0.5))' }}>ME</span>
+                  <sup className="text-3xl font-bold" style={{ color: T.textDim }}>™</sup>
+                </h1>
+                <p className="text-lg font-bold uppercase tracking-[0.4em]" style={{ color: T.textMid }}>
+                  {t('platform:hub.tagline')}
+                </p>
+                <div className="flex justify-center">
+                  <div className="inline-flex items-center gap-4 px-8 py-4 rounded-2xl"
+                    style={{ background: `${afseStatus.color}10`, border: `1px solid ${afseStatus.color}25` }}>
+                    <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: afseStatus.color }} />
+                    <span className="text-lg font-black uppercase tracking-wider" style={{ color: afseStatus.color }}>
+                      {t('afse:score.label')} {afseScore.toFixed(0)}/100
+                    </span>
+                    <div className="w-px h-5 bg-white/10" />
+                    <span className="text-base font-bold uppercase tracking-wider" style={{ color: afseStatus.color }}>
+                      {afseStatus.label}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-          {/* System status */}
-          <div className="p-3 border-t border-white/5">
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-black/40">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#28a745] animate-pulse" />
-              <span className="text-[7px] font-black uppercase tracking-widest text-slate-600">
-                System Operational
-              </span>
+              {/* AFSE Progress */}
+              <div className="rounded-3xl p-8" style={{ background: T.bg2, border: `1px solid ${T.border}` }}>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-widest mb-1" style={{ color: T.textMid }}>
+                      {t('platform:hub.cycleProgress')}
+                    </p>
+                    <p className="text-2xl font-black" style={{ color: T.text }}>
+                      {completedLayers}{' '}
+                      <span className="text-xl font-normal" style={{ color: T.textMid }}>{t('afse:score.layers')}</span>
+                    </p>
+                  </div>
+                  <span className="text-5xl font-black" style={{ color: T.cyan }}>{progressPct}%</span>
+                </div>
+                <div className="flex gap-2">
+                  {Array.from({ length: 8 }, (_, i) => {
+                    const n = i + 1;
+                    const done = n < maxPhaseReached;
+                    const current = n === activePhase;
+                    const locked = n > maxPhaseReached;
+                    const color = LAYER_COLORS[i];
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                        <div className="w-full h-10 rounded-xl flex items-center justify-center transition-all"
+                          style={{
+                            background: done ? `${color}18` : current ? `${color}14` : 'rgba(255,255,255,0.02)',
+                            border: `1px solid ${current ? color+'60' : done ? color+'30' : T.border}`,
+                            boxShadow: current ? `0 0 20px ${color}30` : 'none',
+                          }}>
+                          <span className="text-sm font-black" style={{ color: done ? color : current ? color : T.textDim }}>
+                            {done ? '✓' : current ? '▶' : locked ? '·' : String(n).padStart(2,'0')}
+                          </span>
+                        </div>
+                        <span className="text-xs font-bold" style={{ color: current ? color : T.textDim }}>L{String(n).padStart(2,'0')}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 5 Módulos */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="h-px flex-1" style={{ background: T.border }} />
+                  <span className="text-sm font-bold uppercase tracking-[0.4em]" style={{ color: T.textDim }}>
+                    {t('afse:ecosystem')}
+                  </span>
+                  <div className="h-px flex-1" style={{ background: T.border }} />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {ME_MODULES.map(mod => (
+                    <div key={mod.id}
+                      className="relative rounded-3xl p-7 transition-all duration-300 group hover:-translate-y-1"
+                      style={{ background: mod.active ? `${mod.color}07` : T.bg2, border: `1px solid ${mod.active ? mod.color+'25' : T.border}` }}>
+                      <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                        style={{ background: `radial-gradient(ellipse at 50% 0%, ${mod.color}08, transparent 70%)` }} />
+                      <div className="absolute top-5 right-5">
+                        {mod.active ? (
+                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
+                            style={{ background: `${mod.color}15`, border: `1px solid ${mod.color}30` }}>
+                            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: mod.color }} />
+                            <span className="text-xs font-black uppercase tracking-wider" style={{ color: mod.color }}>{t('status.active')}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
+                            style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.border}` }}>
+                            <Lock size={11} style={{ color: T.textDim }} />
+                            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: T.textDim }}>{mod.plan}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
+                        style={{ background: mod.active ? `${mod.color}15` : 'rgba(255,255,255,0.04)', border: `1px solid ${mod.active ? mod.color+'30' : T.border}`, color: mod.active ? mod.color : T.textDim }}>
+                        {mod.icon}
+                      </div>
+                      <h3 className="text-xl font-black tracking-tight mb-1">
+                        <span style={{ color: T.text }}>{t(mod.nameKey).replace('ME','')}</span>
+                        <span style={{ color: mod.active ? mod.color : T.textDim }}>ME</span>
+                      </h3>
+                      <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: mod.active ? mod.color : T.textDim }}>
+                        {t(mod.taglineKey)}
+                      </p>
+                      <p className="text-sm leading-relaxed mb-6" style={{ color: T.textMid }}>{t(mod.descKey)}</p>
+                      {mod.active ? (
+                        <button onClick={() => setActiveView('workspace')}
+                          className="w-full py-3.5 rounded-2xl text-sm font-black uppercase tracking-widest text-black flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]"
+                          style={{ background: mod.color, boxShadow: `0 6px 30px ${mod.color}35` }}>
+                          {t('actions.enter')} <ArrowRight size={16} />
+                        </button>
+                      ) : (
+                        <button disabled className="w-full py-3.5 rounded-2xl text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2"
+                          style={{ background: 'transparent', border: `1px solid ${T.border}`, color: T.textDim, cursor: 'not-allowed' }}>
+                          <Lock size={14} /> {t('status.locked')}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="text-center py-8 border-t" style={{ borderColor: T.border }}>
+                <p className="text-base font-semibold" style={{ color: T.textDim }}>{t('brand.slogan')}</p>
+                <p className="text-lg font-black uppercase tracking-widest mt-2" style={{ color: T.cyan, opacity: 0.5 }}>
+                  {t('brand.sloganAccent')}
+                </p>
+              </div>
             </div>
           </div>
-        </aside>
+        )}
 
-        {/* ── WORKSPACE VIEW ──────────────────────────────────────────────── */}
+        {/* WORKSPACE */}
         {activeView === 'workspace' && (
           <div className="flex-1 flex overflow-hidden">
-
-            {/* Matrix workspace */}
-            <section className="flex-1 overflow-y-auto p-8">
+            <section className="flex-1 overflow-y-auto p-10">
               {currentLayer ? (
-                <div className="max-w-3xl mx-auto">
-                  {/* Layer header */}
-                  <div className="mb-10">
-                    <div className="flex items-center gap-4 mb-3">
-                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-[11px] font-black text-black"
-                        style={{
-                          background: LAYER_COLORS[activePhase - 1],
-                          boxShadow: `0 0 20px ${LAYER_COLORS[activePhase - 1]}60`,
-                        }}>
-                        {String(activePhase).padStart(2, '0')}
+                <div className="max-w-2xl mx-auto">
+                  <div className="mb-12">
+                    <div className="flex items-center gap-4 mb-5">
+                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black text-black"
+                        style={{ background: LAYER_COLORS[activePhase-1], boxShadow: `0 0 30px ${LAYER_COLORS[activePhase-1]}50` }}>
+                        {String(activePhase).padStart(2,'0')}
                       </div>
                       <div>
-                        <p className="text-[8px] font-black uppercase tracking-[0.5em] text-slate-600">
-                          Capa Activa
+                        <p className="text-sm font-bold uppercase tracking-widest mb-1" style={{ color: T.textMid }}>
+                          {t('afse:layers.active')}
                         </p>
-                        <h2 className="text-2xl font-black text-white uppercase italic tracking-tight"
-                          style={{ color: LAYER_COLORS[activePhase - 1] }}>
+                        <h2 className="text-2xl font-black uppercase tracking-wide" style={{ color: LAYER_COLORS[activePhase-1] }}>
                           {currentLayer.name}
                         </h2>
                       </div>
                     </div>
-                    <p className="text-slate-500 text-[12px] leading-relaxed pl-14">
-                      {currentLayer.objective}
-                    </p>
-
-                    {/* Progress bar */}
-                    <div className="mt-6 pl-14">
-                      <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-slate-700 mb-2">
-                        <span>Progreso de capa</span>
-                        <span style={{ color: LAYER_COLORS[activePhase - 1] }}>
-                          {activePhase}/{layers.length}
-                        </span>
+                    <p className="text-base leading-relaxed" style={{ color: T.textMid }}>{currentLayer.objective}</p>
+                    <div className="mt-6">
+                      <div className="flex justify-between text-sm font-bold uppercase tracking-wider mb-2" style={{ color: T.textDim }}>
+                        <span>{t('afse:score.progress')}</span>
+                        <span style={{ color: LAYER_COLORS[activePhase-1] }}>{activePhase} / {layers.length}</span>
                       </div>
-                      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-1 rounded-full overflow-hidden" style={{ background: T.bg3 }}>
                         <div className="h-full rounded-full transition-all duration-700"
-                          style={{
-                            width: `${(activePhase / layers.length) * 100}%`,
-                            background: `linear-gradient(90deg, ${LAYER_COLORS[0]}, ${LAYER_COLORS[activePhase - 1]})`,
-                            boxShadow: `0 0 10px ${LAYER_COLORS[activePhase - 1]}`,
-                          }} />
+                          style={{ width: `${(activePhase/layers.length)*100}%`, background: `linear-gradient(90deg, ${LAYER_COLORS[0]}, ${LAYER_COLORS[activePhase-1]})` }} />
                       </div>
                     </div>
                   </div>
-
-                  {/* Matrix inputs */}
-                  <div className="space-y-8">
-                    <div>
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="h-[1px] flex-1 bg-white/5" />
-                        <span className="text-[8px] font-black uppercase tracking-[0.5em] text-slate-700">
-                          Matriz de Inputs
-                        </span>
-                        <div className="h-[1px] flex-1 bg-white/5" />
-                      </div>
-                      <MatrixRenderer
-                        fields={currentLayer.mainMatrix.fields}
-                        values={userData}
-                        onChange={(field, value) => setUserData(prev => ({ ...prev, [field]: value }))}
-                      />
-                    </div>
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="h-px flex-1" style={{ background: T.border }} />
+                    <span className="text-sm font-bold uppercase tracking-widest" style={{ color: T.textDim }}>{t('afse:layers.matrix')}</span>
+                    <div className="h-px flex-1" style={{ background: T.border }} />
                   </div>
+                  <MatrixRenderer
+                    fields={currentLayer.mainMatrix.fields}
+                    values={userData}
+                    onChange={(field, value) => setUserData(prev => ({ ...prev, [field]: value }))}
+                  />
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-full">
-                  <p className="text-slate-700 font-black uppercase tracking-widest text-[10px]">
-                    Selecciona una capa para comenzar
-                  </p>
+                  <p className="text-base font-bold uppercase tracking-widest" style={{ color: T.textDim }}>{t('errors.selectLayer')}</p>
                 </div>
               )}
             </section>
 
-            {/* AURON Panel */}
-            <aside className="w-[340px] flex-shrink-0 border-l border-white/5 flex flex-col"
-              style={{ background: 'rgba(2,4,10,0.9)' }}>
+            {/* AURON PANEL PREMIUM REFACTOR */}
+            <aside className="w-[380px] flex-shrink-0 border-l flex flex-col relative"
+              style={{ background: 'rgba(2,4,10,0.65)', backdropFilter: 'blur(20px)', borderColor: T.border }}>
+              
+              {/* Resplandor superior sutil */}
+              <div className="absolute top-0 left-0 right-0 h-32 pointer-events-none opacity-20"
+                style={{ background: `radial-gradient(ellipse at 50% -20%, ${T.cyan}, transparent 70%)` }} />
 
-              {/* AURON Header */}
-              <div className="p-5 border-b border-white/5">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                      style={{ background: '#00ffff', boxShadow: '0 0 20px #00ffff60' }}>
-                      <Brain size={18} className="text-black" />
+              <div className="p-6 border-b relative z-10" style={{ borderColor: T.border2 }}>
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all"
+                      style={{ background: T.cyan, boxShadow: `0 0 30px ${T.cyanGlow}` }}>
+                      <Brain size={22} className="text-black" />
                     </div>
                     <div>
-                      <p className="text-[11px] font-black text-white uppercase tracking-widest">AURON</p>
-                      <p className="text-[7px] font-bold text-[#00ffff] tracking-widest">IA ESTRATÉGICA · LIVE</p>
+                      <p className="text-lg font-black uppercase tracking-widest leading-none mb-1" style={{ color: T.text }}>{t('auron:name')}</p>
+                      <p className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: T.cyan }}>{t('auron:role')}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 bg-[#28a745]/10 border border-[#28a745]/20 px-3 py-1.5 rounded-xl">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#28a745] animate-pulse" />
-                    <span className="text-[7px] font-black text-[#28a745] uppercase tracking-widest">Online</span>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-green-500/20 bg-green-500/10">
+                    <div className="w-2 h-2 rounded-full bg-[#00E676] animate-pulse" style={{ boxShadow: '0 0 10px #00E676' }} />
+                    <span className="text-[10px] font-black text-[#00E676] uppercase tracking-[0.15em]">{t('auron:status')}</span>
                   </div>
                 </div>
-                {/* Context indicator */}
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-white/3 border border-white/5">
-                  <Eye size={10} className="text-[#00ffff]" />
-                  <span className="text-[8px] text-slate-600 font-mono">
-                    Contexto: Capa {String(activePhase).padStart(2,'0')} — {currentLayer?.code ?? '...'}
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all" 
+                  style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.border}` }}>
+                  <Eye size={14} style={{ color: T.cyan }} />
+                  <span className="text-xs font-bold tracking-widest uppercase" style={{ color: T.textMid }}>
+                    {t('auron:watching', { layer: String(activePhase).padStart(2,'0'), code: currentLayer?.code ?? '...' })}
                   </span>
                 </div>
               </div>
 
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-5">
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 relative z-10 scrollbar-thin">
                 {messages.map((m, i) => <AuronMsg key={i} msg={m} />)}
                 {auronLoading && (
-                  <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-lg bg-[#00ffff] flex items-center justify-center text-[7px] font-black text-black mt-1">AI</div>
-                    <div className="px-5 py-4 rounded-2xl bg-[#00ffff]/06 border border-[#00ffff]/15 flex items-center gap-2">
-                      {[0,1,2].map(i => (
-                        <div key={i} className="w-1.5 h-1.5 rounded-full bg-[#00ffff] animate-bounce"
-                          style={{ animationDelay: `${i * 0.15}s` }} />
-                      ))}
+                  <div className="flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="w-9 h-9 rounded-[14px] flex items-center justify-center text-sm font-black text-black mt-1 flex-shrink-0" 
+                      style={{ background: T.cyan, boxShadow: `0 0 15px ${T.cyanGlow}` }}>
+                      A
+                    </div>
+                    <div className="px-6 py-4 rounded-2xl rounded-tl-sm flex items-center gap-2.5"
+                      style={{ background: 'rgba(0,229,255,0.05)', border: `1px solid rgba(0,229,255,0.15)` }}>
+                      {[0,1,2].map(i => <div key={i} className="w-2 h-2 rounded-full animate-bounce" style={{ background: T.cyan, boxShadow: `0 0 8px ${T.cyan}`, animationDelay: `${i*0.15}s` }} />)}
                     </div>
                   </div>
                 )}
                 <div ref={chatEndRef} />
               </div>
 
-              {/* Input */}
-              <div className="p-4 border-t border-white/5">
+              <div className="p-6 border-t relative z-10" style={{ borderColor: T.border2, background: 'rgba(0,0,0,0.2)' }}>
                 <form onSubmit={handleConsultation}
-                  className="flex items-center gap-3 bg-white/5 border border-white/8 rounded-2xl px-4 py-3">
-                  <input
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
-                    placeholder="Consulta al copiloto..."
-                    disabled={auronLoading}
-                    className="flex-1 bg-transparent text-[10px] text-white outline-none placeholder:text-slate-800 font-mono disabled:opacity-50"
-                  />
+                  className="flex items-center gap-3 rounded-2xl px-2 py-2 transition-all focus-within:ring-2"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.border2}`, paddingLeft: 16 }}>
+                  <button type="button" onClick={() => setIsListening(p => !p)}
+                    className="flex items-center justify-center transition-all hover:scale-110"
+                    style={{ color: isListening ? T.red : T.textDim }}>
+                    {isListening ? <MicOff size={16} /> : <Mic size={16} />}
+                  </button>
+                  <input value={input} onChange={e => setInput(e.target.value)}
+                    placeholder={t('auron:placeholder')} disabled={auronLoading}
+                    className="flex-1 bg-transparent text-[13px] font-medium outline-none disabled:opacity-50 placeholder:text-slate-600"
+                    style={{ color: T.text }} />
                   <button type="submit" disabled={auronLoading}
-                    className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 disabled:opacity-50"
-                    style={{ background: '#00ffff', boxShadow: '0 0 15px #00ffff60' }}>
-                    <ChevronRight size={16} className="text-black" />
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all hover:brightness-125 hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
+                    style={{ background: T.cyan, boxShadow: `0 4px 15px ${T.cyanGlow}` }}>
+                    <Send size={16} className="text-black ml-0.5" />
                   </button>
                 </form>
-                <p className="text-[7px] text-slate-800 font-mono text-center mt-2 uppercase tracking-widest">
-                  Di "avanzar" para validar y cerrar la capa
+                <p className="text-[10px] font-black text-center mt-4 uppercase tracking-[0.2em]" style={{ color: T.textDim }}>
+                  {t('auron:advance.hint')}
                 </p>
               </div>
             </aside>
           </div>
         )}
 
-        {/* ── DASHBOARD VIEW ──────────────────────────────────────────────── */}
+        {/* DASHBOARD */}
         {activeView === 'dashboard' && (
-          <div className="flex-1 overflow-y-auto p-8">
-            <div className="max-w-6xl mx-auto space-y-8">
-
-              {/* Title */}
+          <div className="flex-1 overflow-y-auto p-10">
+            <div className="max-w-5xl mx-auto space-y-10">
               <div className="flex items-end justify-between">
                 <div>
-                  <p className="text-[8px] font-black uppercase tracking-[0.5em] text-slate-600 mb-2">
-                    Auditoría Predictiva
+                  <p className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: T.textMid }}>
+                    {t('platform:dashboard.subtitle')}
                   </p>
-                  <h2 className="text-4xl font-black text-white tracking-tighter italic">
-                    Master <span style={{ color: '#00ffff' }}>Dashboard</span>
+                  <h2 className="text-4xl font-black tracking-tight">
+                    <span style={{ color: T.text }}>Master </span>
+                    <span style={{ color: T.cyan }}>{t('platform:dashboard.title')}</span>
                   </h2>
                 </div>
                 <div className="text-right">
-                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-600">
-                    {company?.name ?? 'Sin empresa'}
-                  </p>
-                  <p className="text-[8px] font-mono text-slate-700 mt-1">
-                    AFSE NeuroCode Engine v4.2
-                  </p>
+                  <p className="text-base font-bold" style={{ color: T.textMid }}>{company?.name ?? '—'}</p>
+                  <p className="text-sm mt-0.5" style={{ color: T.textDim }}>Arquitectura ME · Neuro Code</p>
                 </div>
               </div>
 
-              {/* Metrics row */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <MetricCard label="Score AFSE" value={`${afseScore.toFixed(0)}/100`}
-                  sub={`↑ Estado: ${afseStatus.label}`} color={afseStatus.color}
-                  icon={<TrendingUp size={14} />} />
-                <MetricCard label="Fase Activa" value={`L${String(activePhase).padStart(2,'0')}`}
-                  sub={currentLayer?.code ?? '...'} color={LAYER_COLORS[activePhase - 1]}
-                  icon={<Target size={14} />} />
-                <MetricCard label="Capas Completadas" value={`${maxPhaseReached - 1}/8`}
-                  sub={`${Math.round(((maxPhaseReached - 1) / 8) * 100)}% del ciclo`}
-                  color="#28a745" icon={<Activity size={14} />} />
-                <MetricCard label="Empresa" value={company ? '✓' : '—'}
-                  sub={company?.name ?? 'No asignada'} color="#9900ff"
-                  icon={<Cpu size={14} />} />
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+                <MetricCard label={t('platform:dashboard.metrics.afseScore')}   value={`${afseScore.toFixed(0)}/100`} sub={`${t('afse:score.label')}: ${afseStatus.label}`}             color={afseStatus.color}           icon={<TrendingUp size={18} />} />
+                <MetricCard label={t('platform:dashboard.metrics.activeLayer')} value={`L${String(activePhase).padStart(2,'0')}`} sub={currentLayer?.code ?? '...'}                      color={LAYER_COLORS[activePhase-1]} icon={<Target    size={18} />} />
+                <MetricCard label={t('platform:dashboard.metrics.completed')}   value={`${maxPhaseReached-1} / 8`}   sub={`${Math.round(((maxPhaseReached-1)/8)*100)}% ${t('afse:layers.cycleOf')}`} color="#00E676"               icon={<Activity  size={18} />} />
+                <MetricCard label={t('platform:dashboard.metrics.company')}     value={company ? '✓' : '—'}          sub={company?.name ?? '—'}                                          color={T.purple}                   icon={<Cpu       size={18} />} />
               </div>
 
-              {/* Area chart + status */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 bg-black/60 border border-white/5 rounded-3xl p-6">
+                <div className="lg:col-span-2 rounded-3xl p-7" style={{ background: T.bg2, border: `1px solid ${T.border}` }}>
                   <div className="flex items-center justify-between mb-6">
                     <div>
-                      <p className="text-[8px] font-black uppercase tracking-[0.4em] text-[#00ffff] mb-1">
-                        Progreso por Capa
-                      </p>
-                      <p className="text-[8px] text-slate-600 font-mono">AFSE Cycle Performance</p>
+                      <p className="text-sm font-bold uppercase tracking-widest mb-1" style={{ color: T.cyan }}>{t('platform:dashboard.layerProgress')}</p>
+                      <p className="text-sm" style={{ color: T.textDim }}>{t('platform:dashboard.cyclePerformance')}</p>
                     </div>
-                    <RefreshCw size={14} className="text-slate-700" />
+                    <RefreshCw size={16} style={{ color: T.textDim }} />
                   </div>
                   <div className="h-40">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={sparkData}>
                         <defs>
                           <linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#00ffff" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#00ffff" stopOpacity={0} />
+                            <stop offset="5%"  stopColor={T.cyan} stopOpacity={0.25} />
+                            <stop offset="95%" stopColor={T.cyan} stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <XAxis dataKey="name" tick={{ fill: '#374151', fontSize: 8, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
+                        <XAxis dataKey="name" tick={{ fill: T.textDim, fontSize: 11 }} axisLine={false} tickLine={false} />
                         <YAxis hide />
-                        <Tooltip
-                          contentStyle={{ background: '#02040a', border: '1px solid rgba(0,255,255,0.2)', borderRadius: 12, fontSize: 10 }}
-                          labelStyle={{ color: '#00ffff' }}
-                          itemStyle={{ color: '#a0f0f0' }}
-                        />
-                        <Area type="monotone" dataKey="value" stroke="#00ffff" fill="url(#grad1)" strokeWidth={2} dot={false} />
+                        <Tooltip contentStyle={{ background: T.bg3, border: `1px solid ${T.border2}`, borderRadius: 12, fontSize: 12 }}
+                          labelStyle={{ color: T.cyan }} itemStyle={{ color: T.textMid }} />
+                        <Area type="monotone" dataKey="value" stroke={T.cyan} fill="url(#grad1)" strokeWidth={2} dot={false} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
-                {/* Alertas */}
-                <div className="bg-black/60 border border-white/5 rounded-3xl p-6">
-                  <div className="flex items-center gap-2 mb-5">
-                    <AlertCircle size={14} className="text-[#ef4444]" />
-                    <p className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-400">
-                      Alertas Activas
-                    </p>
+                <div className="rounded-3xl p-7" style={{ background: T.bg2, border: `1px solid ${T.border}` }}>
+                  <div className="flex items-center gap-2.5 mb-5">
+                    <AlertCircle size={16} style={{ color: T.red }} />
+                    <p className="text-sm font-bold uppercase tracking-widest" style={{ color: T.textMid }}>{t('platform:dashboard.alerts')}</p>
                   </div>
                   <div className="space-y-3">
                     {afseScore < 90 && (
-                      <div className="flex items-start gap-3 p-3 rounded-xl bg-[#ef4444]/05 border border-[#ef4444]/15">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#ef4444] mt-1.5 flex-shrink-0" />
-                        <p className="text-[9px] text-slate-400 leading-relaxed">
-                          Score AFSE por debajo del umbral óptimo (90)
-                        </p>
+                      <div className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: 'rgba(255,61,87,0.05)', border: '1px solid rgba(255,61,87,0.15)' }}>
+                        <div className="w-2 h-2 rounded-full bg-[#FF3D57] mt-1.5 flex-shrink-0" />
+                        <p className="text-sm leading-relaxed" style={{ color: T.textMid }}>{t('platform:dashboard.alertScoreLow')}</p>
                       </div>
                     )}
                     {maxPhaseReached < 4 && (
-                      <div className="flex items-start gap-3 p-3 rounded-xl bg-[#eab308]/05 border border-[#eab308]/15">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#eab308] mt-1.5 flex-shrink-0" />
-                        <p className="text-[9px] text-slate-400 leading-relaxed">
-                          Ciclo AFSE en fase inicial — avanzar a BSC
-                        </p>
+                      <div className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: 'rgba(255,179,0,0.05)', border: '1px solid rgba(255,179,0,0.15)' }}>
+                        <div className="w-2 h-2 rounded-full bg-[#FFB300] mt-1.5 flex-shrink-0" />
+                        <p className="text-sm leading-relaxed" style={{ color: T.textMid }}>{t('platform:dashboard.alertAdvanceBSC')}</p>
                       </div>
                     )}
-                    <div className="flex items-start gap-3 p-3 rounded-xl bg-[#28a745]/05 border border-[#28a745]/15">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#28a745] mt-1.5 flex-shrink-0" />
-                      <p className="text-[9px] text-slate-400 leading-relaxed">
-                        Sistema operacional — AURON en línea
-                      </p>
+                    <div className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: 'rgba(0,230,118,0.05)', border: '1px solid rgba(0,230,118,0.15)' }}>
+                      <div className="w-2 h-2 rounded-full bg-[#00E676] mt-1.5 flex-shrink-0" />
+                      <p className="text-sm leading-relaxed" style={{ color: T.textMid }}>{t('platform:dashboard.alertOnline')}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Layer grid */}
-              <div className="bg-black/60 border border-white/5 rounded-3xl p-6">
+              <div className="rounded-3xl p-7" style={{ background: T.bg2, border: `1px solid ${T.border}` }}>
                 <div className="flex items-center gap-3 mb-6">
-                  <BarChart3 size={14} className="text-[#00ffff]" />
-                  <p className="text-[8px] font-black uppercase tracking-[0.4em] text-white">
-                    Flujo de Capas Estratégicas
-                  </p>
+                  <BarChart3 size={18} style={{ color: T.cyan }} />
+                  <p className="text-base font-bold uppercase tracking-widest" style={{ color: T.text }}>{t('afse:layers.flow')}</p>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
                   {layers.map(l => {
-                    const isCompleted = l.id < maxPhaseReached;
-                    const isCurrent   = l.id === activePhase;
-                    const isLocked    = l.id > maxPhaseReached;
-                    const color       = LAYER_COLORS[l.id - 1];
+                    const done = l.id < maxPhaseReached;
+                    const current = l.id === activePhase;
+                    const locked = l.id > maxPhaseReached;
+                    const color = LAYER_COLORS[l.id-1];
                     return (
                       <button key={l.id}
-                        onClick={() => { if (!isLocked) { setActivePhase(l.id); setActiveView('workspace'); }}}
-                        className="p-4 rounded-2xl border text-center transition-all hover:scale-105"
-                        style={{
-                          background: isCurrent ? `${color}12` : isCompleted ? 'rgba(40,167,69,0.05)' : 'rgba(0,0,0,0.4)',
-                          borderColor: isCurrent ? color : isCompleted ? '#28a74530' : 'rgba(255,255,255,0.05)',
-                          boxShadow: isCurrent ? `0 0 20px ${color}20` : 'none',
-                          opacity: isLocked ? 0.3 : 1,
-                        }}>
-                        <p className="text-[9px] font-black mb-1" style={{ color: isCurrent ? color : isCompleted ? '#28a745' : '#374151' }}>
+                        onClick={() => { if (!locked) { setActivePhase(l.id); setActiveView('workspace'); }}}
+                        className="p-4 rounded-2xl border text-center transition-all hover:scale-[1.04]"
+                        style={{ background: current ? `${color}12` : done ? 'rgba(0,230,118,0.05)' : T.bg3,
+                          borderColor: current ? color+'50' : done ? 'rgba(0,230,118,0.20)' : T.border,
+                          boxShadow: current ? `0 0 20px ${color}25` : 'none', opacity: locked ? 0.25 : 1 }}>
+                        <p className="text-base font-black mb-1" style={{ color: current ? color : done ? '#00E676' : T.textDim }}>
                           {String(l.id).padStart(2,'0')}
                         </p>
-                        <p className="text-[7px] font-black uppercase tracking-wider" style={{ color: isCurrent ? color : '#4b5563' }}>
-                          {l.code}
-                        </p>
-                        <div className="mt-2 h-1 rounded-full mx-auto w-8"
-                          style={{
-                            background: isCompleted ? '#28a745' : isCurrent ? color : '#1f2937',
-                            boxShadow: isCurrent ? `0 0 8px ${color}` : isCompleted ? '0 0 8px #28a745' : 'none',
-                          }} />
+                        <p className="text-xs font-bold uppercase tracking-wide" style={{ color: current ? color : T.textDim }}>{l.code}</p>
+                        <div className="mt-2.5 h-0.5 rounded-full mx-auto w-8" style={{ background: done ? '#00E676' : current ? color : T.bg3 }} />
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* AURON Terminal */}
-              <div className="bg-[#02040a] border border-white/5 rounded-3xl p-6 font-mono">
+              <div className="rounded-3xl p-7" style={{ background: T.bg3, border: `1px solid ${T.border}` }}>
                 <div className="flex items-center gap-3 mb-5">
-                  <Terminal size={14} className="text-[#00ffff]" />
-                  <span className="text-[9px] text-[#00ffff]/60 uppercase tracking-widest">AURON Terminal Feed</span>
+                  <Terminal size={16} style={{ color: T.cyan }} />
+                  <span className="text-sm font-bold uppercase tracking-widest" style={{ color: T.cyan, opacity: 0.7 }}>
+                    {t('auron:terminal')}
+                  </span>
                   <div className="flex-1" />
                   <div className="flex gap-1.5">
-                    {['#ef4444','#eab308','#28a745'].map(c => (
-                      <div key={c} className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
-                    ))}
+                    {[T.red, T.amber, '#00E676'].map(c => <div key={c} className="w-3 h-3 rounded-full" style={{ background: c }} />)}
                   </div>
                 </div>
-                <div className="h-36 overflow-y-auto space-y-3 pr-2">
-                  {messages.slice(-6).map((m, i) => (
-                    <div key={i} className="flex gap-3 border-l-2 border-white/5 pl-3 py-0.5">
-                      <span className="text-[#00ffff]/40 text-[8px] whitespace-nowrap">[{m.ts}]</span>
-                      <p className="text-[9px] leading-relaxed text-slate-500">
-                        <span className="font-bold mr-2" style={{ color: m.role === 'auron' ? '#00ffff' : '#fff' }}>
-                          {m.role === 'auron' ? 'AURON_CMD:' : 'USER_CMD:'}
+                <div className="h-32 overflow-y-auto space-y-3 pr-2">
+                  {messages.slice(-5).map((m, i) => (
+                    <div key={i} className="flex gap-4 border-l-2 pl-4 py-1" style={{ borderColor: T.border }}>
+                      <span className="text-xs whitespace-nowrap font-mono" style={{ color: `${T.cyan}50` }}>[{m.ts}]</span>
+                      <p className="text-sm leading-relaxed" style={{ color: T.textDim }}>
+                        <span className="font-bold mr-2" style={{ color: m.role === 'auron' ? T.cyan : T.text }}>
+                          {m.role === 'auron' ? `${t('auron:name')}:` : `${t('auron:user')}:`}
                         </span>
                         {m.text.slice(0, 120)}{m.text.length > 120 ? '...' : ''}
                       </p>
                     </div>
                   ))}
                   {messages.length === 0 && (
-                    <p className="text-[9px] text-slate-800 animate-pulse">_ ESPERANDO TRANSMISIÓN...</p>
+                    <p className="text-sm animate-pulse" style={{ color: T.textDim }}>{t('auron:waiting')}</p>
                   )}
                 </div>
               </div>
@@ -838,26 +1192,23 @@ const App = () => {
         )}
       </div>
 
-      {/* ── FOOTER STATUS BAR ───────────────────────────────────────────────── */}
-      <footer className="relative z-50 h-7 border-t border-white/5 px-6 flex items-center justify-between"
-        style={{ background: 'rgba(2,4,10,0.95)' }}>
+      {/* FOOTER */}
+      <footer className="relative z-50 h-8 border-t px-6 flex items-center justify-between"
+        style={{ background: 'rgba(6,9,15,0.95)', borderColor: T.border }}>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#28a745] animate-pulse" />
-            <span className="text-[7px] font-black uppercase tracking-widest text-slate-700">System: Operational</span>
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#00E676] animate-pulse" />
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: T.textDim }}>
+              {t('platform:footer.operational')}
+            </span>
           </div>
-          <span className="text-slate-800 text-[7px]">·</span>
-          <span className="text-[7px] font-mono text-slate-700 uppercase">Gemini Flash</span>
-          <span className="text-slate-800 text-[7px]">·</span>
-          <span className="text-[7px] font-mono text-slate-700 uppercase">Supabase RLS</span>
+          <span style={{ color: T.textDim }} className="text-xs">{t('platform:footer.stack')}</span>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-[7px] font-mono text-slate-700 uppercase tracking-widest">
-            AFSE v1 · {new Date().toLocaleDateString('es-CO')}
+          <span className="text-xs" style={{ color: T.textDim }}>
+            Arquitectura ME · {new Date().toLocaleDateString('es-CO')}
           </span>
-          <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: afseStatus.color }}>
-            ● {afseStatus.label}
-          </span>
+          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: afseStatus.color }}>● {afseStatus.label}</span>
         </div>
       </footer>
     </div>

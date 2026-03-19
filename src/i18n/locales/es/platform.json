@@ -1,0 +1,41 @@
+{
+  "dashboard": {
+    "title": "Master Dashboard",
+    "subtitle": "Auditoría Predictiva",
+    "metrics": {
+      "afseScore":   "Score AFSE",
+      "activeLayer": "Fase Activa",
+      "completed":   "Capas Completadas",
+      "company":     "Empresa"
+    },
+    "layerProgress": "Progreso por Capa",
+    "cyclePerformance": "AFSE Cycle Performance",
+    "alerts": "Alertas",
+    "alertScoreLow": "Score bajo umbral óptimo (90)",
+    "alertAdvanceBSC": "Avanzar al BSC (Capa 4)",
+    "alertOnline": "Sistema operacional · AURON activo"
+  },
+  "hub": {
+    "tagline": "Neuro Code Style · Tu empresa programada",
+    "cycleProgress": "Ciclo AFSE · Progreso"
+  },
+  "admin": {
+    "label": "Super Admin",
+    "back": "← Hub"
+  },
+  "footer": {
+    "operational": "Sistema Operacional",
+    "stack": "· Gemini · Supabase RLS"
+  },
+  "plans": {
+    "starter":    "Starter",
+    "operativo":  "Operativo",
+    "formacion":  "Formación",
+    "enterprise": "Enterprise"
+  },
+  "lang": {
+    "es": "ES",
+    "en": "EN",
+    "label": "Idioma"
+  }
+}

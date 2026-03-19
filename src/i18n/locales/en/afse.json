@@ -1,0 +1,78 @@
+{
+  "score": {
+    "label": "AFSE Score",
+    "global": "Global AFSE Score",
+    "cycle": "AFSE Cycle · Progress",
+    "layers": "of 8 layers completed",
+    "progress": "Cycle progress",
+    "status": {
+      "optimo":    "OPTIMAL",
+      "estable":   "STABLE",
+      "enRiesgo":  "AT RISK",
+      "critico":   "CRITICAL"
+    }
+  },
+  "layers": {
+    "title": "AFSE Layers",
+    "active": "Active Layer",
+    "completed": "Layers Completed",
+    "flow": "AFSE Layer Flow",
+    "matrix": "Input Matrix",
+    "cycleOf": "of cycle",
+    "advance": "Say \"advance\" to close current layer",
+    "locked": "Layer locked",
+    "names": {
+      "L01": "Understand",
+      "L02": "Diagnose",
+      "L03": "Direction",
+      "L04": "BSC Strategy",
+      "L05": "Plan CMI",
+      "L06": "Act",
+      "L07": "Accompany",
+      "L08": "Improve"
+    },
+    "codes": {
+      "L01": "UNDERSTAND",
+      "L02": "DIAGNOSE",
+      "L03": "DIRECTION",
+      "L04": "BSC",
+      "L05": "PLAN",
+      "L06": "ACT",
+      "L07": "ACCOMPANY",
+      "L08": "IMPROVE"
+    }
+  },
+  "cycle": {
+    "label": "Cycle",
+    "number": "Cycle #{{number}}",
+    "active": "Active"
+  },
+  "ecosystem": "Architecture ME Ecosystem",
+  "modules": {
+    "simplifica": {
+      "name": "SimplifyME",
+      "tagline": "Strategic Neuro Code",
+      "desc": "The 8 AFSE layers + AURON. Your digital Strategic Director built on your reality."
+    },
+    "gestiona": {
+      "name": "ManageME",
+      "tagline": "Operational Neuro Code",
+      "desc": "SHEQ, KPIs and AS/400 ERP synchronization in real time."
+    },
+    "capacita": {
+      "name": "TrainME",
+      "tagline": "Talent Neuro Code",
+      "desc": "Training and development paths anchored to each AFSE layer."
+    },
+    "evalua": {
+      "name": "EvaluateME",
+      "tagline": "Certification Neuro Code",
+      "desc": "Evaluation center and AFSE competency certification."
+    },
+    "consulta": {
+      "name": "ConsultME",
+      "tagline": "Human Neuro Code",
+      "desc": "The human face of the ecosystem. Certified consultants."
+    }
+  }
+}

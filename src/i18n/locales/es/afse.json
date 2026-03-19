@@ -1,0 +1,78 @@
+{
+  "score": {
+    "label": "Score AFSE",
+    "global": "Score AFSE Global",
+    "cycle": "Ciclo AFSE · Progreso",
+    "layers": "de 8 capas completadas",
+    "progress": "Progreso del ciclo",
+    "status": {
+      "optimo":    "ÓPTIMO",
+      "estable":   "ESTABLE",
+      "enRiesgo":  "EN RIESGO",
+      "critico":   "CRÍTICO"
+    }
+  },
+  "layers": {
+    "title": "Capas AFSE",
+    "active": "Capa Activa",
+    "completed": "Capas Completadas",
+    "flow": "Flujo de Capas AFSE",
+    "matrix": "Matriz de Inputs",
+    "cycleOf": "del ciclo",
+    "advance": "Di \"avanzar\" para cerrar la capa actual",
+    "locked": "Capa bloqueada",
+    "names": {
+      "L01": "Entender",
+      "L02": "Diagnosticar",
+      "L03": "Rumbo",
+      "L04": "Estrategia BSC",
+      "L05": "Planificar CMI",
+      "L06": "Accionar",
+      "L07": "Acompañar",
+      "L08": "Mejorar"
+    },
+    "codes": {
+      "L01": "ENTENDER",
+      "L02": "DIAGNOSTICAR",
+      "L03": "RUMBO",
+      "L04": "BSC",
+      "L05": "PLANEAR",
+      "L06": "ACCIONAR",
+      "L07": "ACOMPAÑAR",
+      "L08": "MEJORAR"
+    }
+  },
+  "cycle": {
+    "label": "Ciclo",
+    "number": "Ciclo #{{number}}",
+    "active": "Activo"
+  },
+  "ecosystem": "Ecosistema Arquitectura ME",
+  "modules": {
+    "simplifica": {
+      "name": "SimplificaME",
+      "tagline": "Neuro Code Estratégico",
+      "desc": "Las 8 capas AFSE + AURON. Tu Director Estratégico digital construido sobre tu realidad."
+    },
+    "gestiona": {
+      "name": "GestionaME",
+      "tagline": "Neuro Code Operativo",
+      "desc": "SHEQ, KPIs y sincronización ERP AS/400 en tiempo real."
+    },
+    "capacita": {
+      "name": "CapacitaME",
+      "tagline": "Neuro Code de Talento",
+      "desc": "Rutas de formación y desarrollo ancladas a cada capa AFSE."
+    },
+    "evalua": {
+      "name": "EvaluaME",
+      "tagline": "Neuro Code Certificación",
+      "desc": "Centro evaluador y certificación de competencias AFSE."
+    },
+    "consulta": {
+      "name": "ConsultaME",
+      "tagline": "Neuro Code Humano",
+      "desc": "La cara humana del ecosistema. Consultores certificados."
+    }
+  }
+}

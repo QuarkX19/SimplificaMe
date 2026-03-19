@@ -1,0 +1,46 @@
+{
+  "brand": {
+    "name": "Architecture",
+    "accent": "ME",
+    "tagline": "Neuro Code Style",
+    "company": "calidadysostenibilidad.com SAS",
+    "slogan": "You don't install software · You don't hire a consultancy",
+    "sloganAccent": "You build your Architecture ME"
+  },
+  "nav": {
+    "hub": "Hub",
+    "workspace": "Workspace",
+    "dashboard": "Dashboard",
+    "admin": "Admin",
+    "back": "← Hub"
+  },
+  "auth": {
+    "access": "Access · Magic Link",
+    "placeholder": "director@company.com",
+    "submit": "Request Access",
+    "sending": "Sending...",
+    "security": "E2E Encrypted · No passwords",
+    "sentTitle": "Magic Link sent",
+    "sentBody": "Check your email",
+    "sentExpiry": "Link expires in 10 minutes",
+    "backButton": "← Use another email",
+    "errorEmail": "Enter a valid email",
+    "errorGeneric": "Error sending link. Please try again."
+  },
+  "status": {
+    "online": "System Online",
+    "loading": "Starting Architecture ME",
+    "operational": "System Operational",
+    "active": "Active",
+    "locked": "See Plans"
+  },
+  "actions": {
+    "enter": "Enter System",
+    "logout": "Sign out",
+    "refresh": "Refresh"
+  },
+  "errors": {
+    "connectionError": "Connection error. Retrying...",
+    "selectLayer": "Select a layer"
+  }
+}
