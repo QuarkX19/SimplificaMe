@@ -1,8 +1,36 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-hub-bg: var(--bg-hub);
+  --color-hub-card: var(--bg-card);
+  --color-hub-border: var(--border-hub);
+  --color-hub-cyan: var(--cyan-hub);
+  --color-hub-cyan-glow: var(--cyan-glow);
+  --color-hub-text: var(--text-base);
+  --color-hub-text-muted: var(--text-muted);
+}
 
 @layer base {
+  :root {
+    --bg-hub: #F0F4FA;
+    --bg-card: #ffffff;
+    --border-hub: rgba(0, 0, 0, 0.08);
+    --cyan-hub: #0088BB;
+    --cyan-glow: rgba(0, 136, 187, 0.15);
+    --text-base: #0f172a;
+    --text-muted: #64748b;
+  }
+  
+  .dark {
+    --bg-hub: #06090F;
+    --bg-card: #050811;
+    --border-hub: rgba(255, 255, 255, 0.05);
+    --cyan-hub: #00E5FF;
+    --cyan-glow: rgba(0, 229, 255, 0.15);
+    --text-base: #F1F5F9;
+    --text-muted: #94A3B8;
+  }
+
   body {
     margin: 0;
     font-family: 'DM Sans', sans-serif;

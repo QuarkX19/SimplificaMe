@@ -22,8 +22,8 @@ export interface AuronRequestOptions {
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 
-const MAX_RETRIES         = 3;
-const RETRY_DELAYS_MS     = [1_000, 2_000, 4_000]; // backoff exponencial
+const MAX_RETRIES = 3;
+const RETRY_DELAYS_MS = [1_000, 2_000, 4_000]; // backoff exponencial
 const MAX_HISTORY_MESSAGES = 20;
 
 // ─── Rate limiter en cliente (defensa extra) ──────────────────────────────────
@@ -33,7 +33,7 @@ class ClientRateLimiter {
   private readonly windowMs: number;
 
   constructor(limit = 30, windowMs = 60_000) {
-    this.limit    = limit;
+    this.limit = limit;
     this.windowMs = windowMs;
   }
 
@@ -108,6 +108,15 @@ async function _callWithRetry(
   }
 }
 
+// ─── Data Sanitizer Middleware (Legal & Compliance MVP) ───────────────────────
+function sanitizePII(text: string): string {
+  let sanitized = text;
+  sanitized = sanitized.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL_PROTEGIDO]'); // Emails
+  sanitized = sanitized.replace(/\b(?:\d[ -]*?){13,16}\b/g, '[TDC_OMITIDA]'); // Tarjetas
+  sanitized = sanitized.replace(/\b\d{8,12}\b/g, '[ID_FINANCIERO_OCULTO]'); // Cuentas Bancarias/RFC/RUT
+  return sanitized;
+}
+
 async function _invokeDirectAPI(options: AuronRequestOptions): Promise<string> {
   // Leemos la llave directamente de Vite en el lado cliente
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -117,28 +126,41 @@ async function _invokeDirectAPI(options: AuronRequestOptions): Promise<string> {
 
   const { prompt, history = [], systemPrompt, companyId, layerNumber, sessionId } = options;
 
+  // OFUSCACIÓN DE DATOS ANTES DE TOCAR EL LLM
+  const sanitizedPrompt = sanitizePII(prompt);
+
   const systemInstruction = systemPrompt
     ? { parts: [{ text: systemPrompt }] }
     : {
-        parts: [{
-          text: `Eres AURON, el asesor estratégico de la metodología AFSE NeuroCode Ultra. 
-Ayudas a empresas a estructurar su estrategia a través de 8 capas: Diagnóstico, Propósito, Objetivos, BSC, Ejecución, Riesgos, Cultura y Gobernanza. 
-Responde en español, de forma clara, directa y orientada a la acción.
+      parts: [{
+        text: `Eres AURON, Mentor Estratégico en arquitectura empresarial y diseño de operaciones.
+Tu misión es guiar a directores de forma progresiva, clara y sin fricción.
+REGLAS ESTRICTAS:
+${history.length === 0 ? "0. REGLA DE RAPPORT: Empieza saludando y pregunta su nombre y cómo prefiere el trato (tú/usted). Esta es tu ÚNICA tarea inicial." : "0. RAPPORT ESTABLECIDO: Usa su nombre y el trato elegido frecuentemente."}
+1. REDUCIR CARGA: Haz máximo 3 preguntas cortas por interacción. NO te adelantes.
+2. OPCIONES LIMPIAS: Ofrece siempre opciones fáciles (A, B, C). PROHIBIDO el uso de asteriscos (*) o guiones (-) en las listas.
+3. TONO: Lenguaje natural, cercano, sin tecnicismos innecesarios. Avanza paso a paso.
+Nunca emitas asesoría jurídica o tributaria directa.
 ${layerNumber ? `Contexto actual: Capa ${layerNumber}.` : ""}`,
-        }],
-      };
+      }],
+    };
 
   const trimmedHistory = history.slice(-20);
   const geminiPayload = {
-    system_instruction: systemInstruction,
+    systemInstruction: systemInstruction,
     contents: [
       ...trimmedHistory,
-      { role: "user", parts: [{ text: prompt }] },
+      { role: "user", parts: [{ text: sanitizedPrompt }] }, // Solo enviamos el texto sanitizado
     ],
-    generationConfig: { maxOutputTokens: 2048, temperature: 0.7, topP: 0.95 },
+    generationConfig: { maxOutputTokens: 2048, temperature: 0.6, topP: 0.90 },
+    safetySettings: [
+      { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_LOW_AND_ABOVE" },
+      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }
+    ]
   };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   const res = await fetch(url, {
     method: "POST",
@@ -147,15 +169,23 @@ ${layerNumber ? `Contexto actual: Capa ${layerNumber}.` : ""}`,
   });
 
   if (!res.ok) {
-    throw new Error(`Error de conexión con IA (${res.status})`);
+    let errorDetail = "";
+    try {
+      const errData = await res.json();
+      errorDetail = errData.error?.message || JSON.stringify(errData);
+    } catch (e) {
+      errorDetail = await res.text().catch(() => "Unknown");
+    }
+    console.error("[AURON ERROR]", res.status, errorDetail);
+    throw new Error(`Error de conexión con IA (${res.status}): ${errorDetail}`);
   }
 
   const data = await res.json();
   const candidate = data?.candidates?.[0];
-  
+
   if (!candidate) throw new Error("Auron falló en procesar la instrucción.");
   if (candidate.finishReason === "SAFETY") throw new Error("Mensaje bloqueado por filtros de seguridad corporativa.");
-  
+
   const responseText = candidate.content.parts.map((p: any) => p.text).join("") || "";
 
   // Guardar en Base de Datos para Historial (Fire-and-forget)
@@ -178,7 +208,7 @@ ${layerNumber ? `Contexto actual: Capa ${layerNumber}.` : ""}`,
 
 export function toGeminiHistory(messages: Array<{ role: "user" | "assistant"; content: string }>): ChatMessage[] {
   return messages.map((m) => ({
-    role:  m.role === "assistant" ? "model" : "user",
+    role: m.role === "assistant" ? "model" : "user",
     parts: [{ text: m.content }],
   }));
 }

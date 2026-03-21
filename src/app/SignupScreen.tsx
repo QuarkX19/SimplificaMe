@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../services/api/supabase';
-import { ShieldCheck, ArrowRight, Building, User as UserIcon, Mail, CheckCircle, Zap } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Building, User as UserIcon, Mail, CheckCircle, Zap, AlertCircle } from 'lucide-react';
 
 const DARK_T = {
   bg: '#030509',
@@ -23,6 +23,7 @@ const SignupScreen: React.FC<{ initialPlan: string; onBackToLogin: () => void }>
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [legalAccepted, setLegalAccepted] = useState(false);
 
   const plans = {
     esencial: { name: 'Plan Esencial', price: 79 },
@@ -41,6 +42,7 @@ const SignupScreen: React.FC<{ initialPlan: string; onBackToLogin: () => void }>
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !name || !company) { setError('Todos los campos son obligatorios'); return; }
+    if (!legalAccepted) { setError('Debes firmar digitalmente aceptando la Política de Privacidad y Términos.'); return; }
     setError(''); setLoading(true);
 
     try {
@@ -142,6 +144,13 @@ const SignupScreen: React.FC<{ initialPlan: string; onBackToLogin: () => void }>
                     <AlertCircle size={14} /> {error}
                   </div>
                 )}
+
+                <div className="flex items-start gap-3 px-1">
+                  <input type="checkbox" id="legal" checked={legalAccepted} onChange={(e) => setLegalAccepted(e.target.checked)} className="mt-1 w-4 h-4 rounded border-gray-600 bg-black/50 text-cyan-500 focus:ring-cyan-500 cursor-pointer" />
+                  <label htmlFor="legal" className="text-[10px] text-gray-400 leading-tight cursor-pointer">
+                    Declaro que he leído y acepto los <a href="#" className="font-bold text-cyan-400 hover:text-cyan-300">Términos de Servicio (SLA)</a> empresariales y la <a href="#" className="font-bold text-cyan-400 hover:text-cyan-300">Política de Privacidad y Manejo de Datos (GDPR)</a>. Comprendo la limitación de responsabilidad respecto a la Inteligencia Artificial.
+                  </label>
+                </div>
 
                 <button type="submit" disabled={loading} className="w-full relative overflow-hidden group/btn rounded-xl">
                   {/* Fondo Btn */}

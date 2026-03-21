@@ -14,6 +14,11 @@ import { getAuronResponse } from "../services/api/geminiService";
 import { buildChatContext } from "../core/chat/chat.context";
 import { applyPreferredLang } from "../i18n";
 import LanguageSwitcher from "../i18n/LanguageSwitcher";
+import { FocusRadio } from "../ui/components/FocusRadio";
+import { FloatingTaskManager } from "../ui/components/FloatingTaskManager";
+import { FloatingMail } from "../ui/components/FloatingMail";
+import { FloatingNeuroNotes } from "../ui/components/FloatingNeuroNotes";
+import { FloatingGoogleSync } from "../ui/components/FloatingGoogleSync";
 import {
   Lock, Activity, LogOut, ShieldCheck,
   BarChart3, Cpu, TrendingUp, AlertCircle, Terminal,
@@ -49,19 +54,19 @@ type ActiveView = 'hub' | 'workspace' | 'dashboard' | 'admin';
 
 // ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
 const T = {
-  bg:      '#06090F',
-  bg2:     '#0A0E18',
-  bg3:     '#0F1420',
-  border:  'rgba(255,255,255,0.06)',
-  border2: 'rgba(255,255,255,0.12)',
-  cyan:    '#00E5FF',
+  bg:      'var(--bg-hub)',
+  bg2:     'var(--bg-card)',
+  bg3:     'var(--bg-card)',
+  border:  'var(--border-hub)',
+  border2: 'var(--border-hub)',
+  cyan:    'var(--cyan-hub)',
   green:   '#00E676',
   amber:   '#FFB300',
   red:     '#FF3D57',
   purple:  '#7C4DFF',
-  text:    '#F1F5F9',
-  textMid: '#94A3B8',
-  textDim: '#475569',
+  text:    'var(--text-base)',
+  textMid: 'var(--text-muted)',
+  textDim: 'var(--text-muted)',
 };
 
 const LAYER_COLORS = [
@@ -239,26 +244,56 @@ const MetricCard: React.FC<{
 );
 
 // ─── AURON MSG ────────────────────────────────────────────────────────────────
-const AuronMsg: React.FC<{ msg: ChatMsg }> = ({ msg }) => (
-  <div className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-    <div className="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center text-sm font-black mt-0.5"
-      style={{ background: msg.role === 'auron' ? T.cyan : 'rgba(255,255,255,0.10)', color: msg.role === 'auron' ? '#000' : T.text }}>
-      {msg.role === 'auron' ? 'A' : 'U'}
-    </div>
-    <div className="max-w-[86%]">
-      {msg.role === 'auron' && <p className="text-xs font-black uppercase tracking-widest mb-2 px-1" style={{ color: T.cyan }}>AURON</p>}
-      <div className="px-4 py-3 rounded-2xl text-sm leading-relaxed"
-        style={{
-          background: msg.role === 'auron' ? 'rgba(0,229,255,0.06)' : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${msg.role === 'auron' ? 'rgba(0,229,255,0.15)' : T.border}`,
-          color: msg.role === 'auron' ? '#A5D8E0' : T.textMid,
-        }}>
-        {msg.text}
+const AuronMsg: React.FC<{ msg: ChatMsg, onOptionSelect?: (text: string) => void }> = ({ msg, onOptionSelect }) => {
+  const renderText = (text: string) => {
+    if (msg.role !== 'auron') return text;
+    return text.split('\n').map((line, i) => {
+      const match = line.match(/^([A-Ea-e]\))\s*(.*)$/);
+      if (match && onOptionSelect) {
+        const cleanText = match[2].replace(/[_\\]/g, '').trim();
+        const fullOptionText = `${match[1]} ${cleanText} `;
+        
+        return (
+          <button
+            key={i}
+            onClick={() => onOptionSelect(fullOptionText)}
+            className="block w-full text-left my-2 px-3 py-2.5 rounded-xl text-[13px] transition-transform hover:-translate-y-0.5 active:scale-95 group"
+            style={{ 
+              background: 'rgba(0,229,255,0.05)', 
+              border: `1px solid rgba(0,229,255,0.2)`,
+              color: '#A5D8E0'
+            }}
+          >
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-[#00E5FF]/20 text-[#00E5FF] font-black mr-2 group-hover:bg-[#00E5FF] group-hover:text-black transition-colors">{match[1].replace(')', '')}</span>
+            <span className="group-hover:text-white transition-colors">{cleanText}</span>
+          </button>
+        );
+      }
+      return <span key={i} className="block mb-1">{line}</span>;
+    });
+  };
+
+  return (
+    <div className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+      <div className="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center text-sm font-black mt-0.5"
+        style={{ background: msg.role === 'auron' ? T.cyan : 'rgba(255,255,255,0.10)', color: msg.role === 'auron' ? '#000' : T.text }}>
+        {msg.role === 'auron' ? 'A' : 'U'}
       </div>
-      <p className="text-xs mt-1 px-1" style={{ color: T.textDim }}>{msg.ts}</p>
+      <div className="max-w-[86%]">
+        {msg.role === 'auron' && <p className="text-xs font-black uppercase tracking-widest mb-2 px-1" style={{ color: T.cyan }}>AURON</p>}
+        <div className="px-4 py-3 rounded-2xl text-sm leading-relaxed"
+          style={{
+            background: msg.role === 'auron' ? 'rgba(0,229,255,0.06)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${msg.role === 'auron' ? 'rgba(0,229,255,0.15)' : T.border}`,
+            color: msg.role === 'auron' ? '#A5D8E0' : T.textMid,
+          }}>
+          {msg.role === 'auron' ? renderText(msg.text) : msg.text}
+        </div>
+        <p className="text-xs mt-1 px-1" style={{ color: T.textDim }}>{msg.ts}</p>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
 type Theme = 'dark' | 'light';
@@ -476,7 +511,7 @@ const LoginScreen: React.FC<{ email: string; setEmail: (v: string) => void }> = 
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 const App = () => {
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation(['translation', 'auron', 'afse', 'brand', 'modules', 'status', 'roles', 'errors', 'auth', 'ui']);
   const ME_MODULES = useMEModules(t);
 
   const [sessionUser, setSessionUser]         = useState<User | null>(null);
@@ -484,6 +519,7 @@ const App = () => {
   const [loginEmail, setLoginEmail]           = useState('');
   const [urlPlan]                             = useState(() => new URLSearchParams(window.location.search).get('plan'));
   const [showSignup, setShowSignup]           = useState(!!urlPlan);
+  const [theme, setTheme]                     = useState<'dark' | 'light'>(() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   const [company, setCompany]                 = useState<Company | null>(null);
   const [cycle, setCycle]                     = useState<AfseCycle | null>(null);
   const [activePhase, setActivePhase]         = useState(1);
@@ -492,12 +528,46 @@ const App = () => {
   const [messages, setMessages]               = useState<ChatMsg[]>([]);
   const [input, setInput]                     = useState('');
   const [auronLoading, setAuronLoading]       = useState(false);
+  const [isListening, setIsListening]         = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin]       = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // ─── SPEECH TO TEXT (MICRÓFONO) ─────────────────────────────────────────────
+  useEffect(() => {
+    let recognition: any = null;
+    if (isListening) {
+      // @ts-ignore
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Tu navegador no soporta dictado por voz. Usa Chrome o Edge.");
+        setIsListening(false);
+        return;
+      }
+      recognition = new SpeechRecognition();
+      recognition.lang = 'es-CO'; // Español
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      
+      recognition.onresult = (event: any) => {
+        const current = event.resultIndex;
+        const transcript = event.results[current][0].transcript;
+        setInput(prev => (prev + " " + transcript).trim());
+      };
+
+      recognition.onerror = (e: any) => {
+        console.warn("Speech API Error:", e.error);
+        setIsListening(false);
+      };
+
+      recognition.start();
+    }
+    return () => {
+      if (recognition) recognition.stop();
+    };
+  }, [isListening]);
   const [activeView, setActiveView]           = useState<ActiveView>('hub');
   const [activeModule, setActiveModule]       = useState<MEModule>(MEModule.SIMPLIFICAME);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin]       = useState(false);
-  const [isListening, setIsListening]         = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const currentLayer = useMemo(() => getLayerById(activePhase), [activePhase]);
   const layers       = useMemo(() => getAllLayers(), []);
@@ -518,6 +588,17 @@ const App = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSessionUser(s?.user ?? null));
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+      root.style.colorScheme = 'dark';
+    } else {
+      root.classList.remove('dark');
+      root.style.colorScheme = 'light';
+    }
+  }, [theme]);
 
   useEffect(() => {
     if (!sessionUser) return;
@@ -569,31 +650,34 @@ const App = () => {
     setInput(''); setAuronLoading(true);
     if (company && cycle) await saveAuronMessage(company.id, cycle.id, sessionUser.id, activePhase, 'user', userText);
     try {
-      // Detectar intención de avance (ES + EN)
-      const isTryingToAdvance = /siguiente|avanzar|cerrar capa|advance|next|close layer/i.test(userText);
-      if (isTryingToAdvance) {
-        const isValid = validateLayer(currentLayer, userData);
-        if (!isValid) {
-          const text = t('auron:layerNotValid', { layer: String(activePhase).padStart(2,'00'), outputs: currentLayer.outputs.join(', ').toUpperCase() });
-          setMessages(prev => [...prev, { role: 'auron', text, ts: new Date().toLocaleTimeString('es-CO') }]);
-          if (company && cycle) await saveAuronMessage(company.id, cycle.id, sessionUser.id, activePhase, 'auron', text);
-          return;
-        }
-        const nextPhase = activePhase + 1;
-        setActivePhase(nextPhase);
-        if (nextPhase > maxPhaseReached) {
-          setMaxPhaseReached(nextPhase);
-          if (company && cycle) await saveLayerProgress(sessionUser.id, company.id, cycle.id, activePhase, currentLayer.code, { fields: userData, completedAt: new Date().toISOString() }, 100);
-        }
-        const text = t('auron:layerClosed', { layer: String(activePhase).padStart(2,'0'), next: String(nextPhase).padStart(2,'0') });
-        setMessages(prev => [...prev, { role: 'auron', text, ts: new Date().toLocaleTimeString('es-CO') }]);
-        if (company && cycle) await saveAuronMessage(company.id, cycle.id, sessionUser.id, activePhase, 'auron', text);
-        return;
-      }
       const systemPrompt = company && cycle
         ? await buildEnrichedAuronContext(company.id, company.name, activePhase, currentLayer.code, currentLayer.objective, cycle.id)
         : buildChatContext(currentLayer, 'DIRECTOR', sessionUser.email ?? 'Director', 'USTED');
-      const response = await getAuronResponse(userText, systemPrompt);
+      
+      // Mapear historial en formato nativo para mantener el hilo de la charla sin alucinaciones
+      const geminiHistory = messages.map(m => ({ 
+        role: m.role === 'auron' ? 'model' : 'user' as "model"|"user", 
+        parts: [{ text: m.text }] as [{ text: string }] 
+      }));
+
+      let response = await getAuronResponse(userText, { systemPrompt, history: geminiHistory });
+      
+      // AUTO-ADVANCE INTERCEPTOR (Driven by Auron's Brain)
+      if (response.includes('[ACTION: ADVANCE_LAYER]')) {
+        response = response.replace('[ACTION: ADVANCE_LAYER]', '').replace(/\[\/ACTION\]/g, '').trim();
+        const isValid = validateLayer(currentLayer, userData);
+        if (!isValid) {
+          response += `\n\n*(Sistema: No se pudo avanzar aún. Faltan campos obligatorios en la Matriz Visible del usuario. Pídeselos sutilmente)*`;
+        } else {
+          const nextPhase = activePhase + 1;
+          setActivePhase(nextPhase);
+          if (nextPhase > maxPhaseReached) {
+            setMaxPhaseReached(nextPhase);
+            if (company && cycle) await saveLayerProgress(sessionUser.id, company.id, cycle.id, activePhase, currentLayer.code, { fields: userData, completedAt: new Date().toISOString() }, 100);
+          }
+        }
+      }
+
       const auronTs = new Date().toLocaleTimeString('es-CO');
       setMessages(prev => [...prev, { role: 'auron', text: response, ts: auronTs }]);
       if (company && cycle) await saveAuronMessage(company.id, cycle.id, sessionUser.id, activePhase, 'auron', response);
@@ -792,19 +876,19 @@ const App = () => {
             {/* TOP HEADER / PROFILE ME */}
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center mb-16 gap-8 relative z-20">
               <div className="flex items-center gap-6 w-full md:w-auto">
-                <div className="w-16 h-16 border border-[#00ffff]/20 rounded-2xl flex items-center justify-center bg-[#00ffff]/5 shadow-[0_0_15px_rgba(0,255,255,0.1)] flex-shrink-0">
-                   <div className="text-2xl font-black text-[#00ffff]">{sessionUser?.email?.[0]?.toUpperCase() ?? 'D'}</div>
+                <div className="w-16 h-16 border rounded-2xl flex items-center justify-center flex-shrink-0 bg-hub-cyan/5 border-hub-cyan/20 shadow-[0_0_15px_var(--cyan-glow)]">
+                   <div className="text-2xl font-black text-hub-cyan">{sessionUser?.email?.[0]?.toUpperCase() ?? 'D'}</div>
                 </div>
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-black text-white italic tracking-tighter shadow-black drop-shadow-md leading-tight">
-                    <span className="text-slate-500 text-base md:text-lg mr-2 font-normal not-italic block md:inline">{t('common.welcome')},</span>
+                  <h1 className="text-2xl md:text-3xl font-black text-hub-text italic tracking-tighter drop-shadow-sm leading-tight">
+                    <span className="text-hub-text-muted text-base md:text-lg mr-2 font-normal not-italic block md:inline">{t('common.welcome')},</span>
                     {company?.name ?? t('brand.company')}
                   </h1>
                   <div className="flex flex-wrap items-center gap-3 mt-3">
-                    <span className="px-3 py-1 bg-[#00ffff]/10 border border-[#00ffff]/20 rounded-full text-[#00ffff] text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                    <span className="px-3 py-1 bg-hub-cyan/10 border border-hub-cyan/20 rounded-full text-hub-cyan text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                       {sessionUser?.email}
                     </span>
-                    <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-slate-400 text-[10px] font-bold uppercase tracking-widest hover:text-white transition-colors cursor-pointer" onClick={() => setActiveView('admin')}>
+                    <span className="px-3 py-1 bg-hub-card border border-hub-border rounded-full text-hub-text-muted text-[10px] font-bold uppercase tracking-widest hover:text-hub-text transition-colors cursor-pointer" onClick={() => setActiveView('admin')}>
                       {t('ui.role')}: {t('roles.estrategico')}
                     </span>
                     <button onClick={() => supabase.auth.signOut()} className="px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full text-red-500 text-[10px] font-bold uppercase tracking-widest hover:bg-red-500/20 transition-colors">
@@ -815,16 +899,25 @@ const App = () => {
               </div>
 
               <div className="flex items-center gap-6 md:ml-auto">
+                <div className="flex gap-2 mr-4 bg-hub-card p-1.5 rounded-2xl border border-hub-border shadow-sm">
+                  <button onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-hub-text-muted hover:text-hub-text">
+                    {theme === 'dark' ? '☀️' : '🌙'}
+                  </button>
+                  <button onClick={() => applyPreferredLang(i18n.language.startsWith('es') ? 'en' : 'es')} className="p-2 w-10 text-center rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-hub-text-muted hover:text-hub-text font-bold text-xs uppercase">
+                    {i18n.language.startsWith('es') ? 'EN' : 'ES'}
+                  </button>
+                </div>
+                
                 <div className="text-right hidden sm:block">
-                  <p className="text-slate-500 text-[9px] uppercase font-bold tracking-widest">{t('afse:score.label')}</p>
-                  <p className="text-white font-black text-sm" style={{ color: afseStatus.color }}>{afseStatus.label}</p>
+                  <p className="text-hub-text-muted text-[9px] uppercase font-bold tracking-widest">{t('afse:score.label')}</p>
+                  <p className="text-hub-text font-black text-sm" style={{ color: afseStatus.color }}>{afseStatus.label}</p>
                 </div>
                 <div className="relative w-16 h-16 flex items-center justify-center flex-shrink-0">
                   <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
-                    <path className="text-white/5" strokeDasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" />
+                    <path className="text-hub-border" strokeDasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" />
                     <path style={{ color: afseStatus.color }} strokeDasharray={`${afseScore}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   </svg>
-                  <span className="text-sm font-black text-white">{afseScore.toFixed(0)}</span>
+                  <span className="text-sm font-black text-hub-text">{afseScore.toFixed(0)}</span>
                 </div>
               </div>
             </div>
@@ -832,18 +925,18 @@ const App = () => {
             {/* MODULE NAVIGATION */}
             <div className="max-w-7xl mx-auto mb-12 flex flex-wrap gap-4 relative z-20">
               {[
-                { id: MEModule.SIMPLIFICAME, label: t('modules.simplificame'), icon: Layers, activeColor: 'text-[#00ffff]', bgActive: 'bg-[#00ffff]/10 border-[#00ffff]/30 shadow-[0_0_30px_#00ffff15]' },
-                { id: MEModule.GESTIONAME, label: t('modules.gestioname'), icon: Target, activeColor: 'text-emerald-400', bgActive: 'bg-emerald-400/10 border-emerald-400/30 shadow-[0_0_30px_#34d39915]' },
-                { id: MEModule.CAPACITAME, label: t('modules.capacitame'), icon: GraduationCap, activeColor: 'text-indigo-400', bgActive: 'bg-indigo-400/10 border-indigo-400/30 shadow-[0_0_30px_#818cf815]' },
-                { id: MEModule.EVALUAME, label: t('modules.evaluame'), icon: ShieldCheck, activeColor: 'text-amber-400', bgActive: 'bg-amber-400/10 border-amber-400/30 shadow-[0_0_30px_#fbbf2415]' },
-                { id: MEModule.CONSULTAME, label: t('modules.consultame'), icon: BarChart3, activeColor: 'text-rose-400', bgActive: 'bg-rose-400/10 border-rose-400/30 shadow-[0_0_30px_#fb718515]' },
+                { id: MEModule.SIMPLIFICAME, label: t('modules.simplificame'), icon: Layers, activeColor: 'text-hub-cyan', bgActive: 'bg-hub-cyan/10 border-hub-cyan/30 shadow-[0_0_30px_var(--cyan-glow)]' },
+                { id: MEModule.GESTIONAME, label: t('modules.gestioname'), icon: Target, activeColor: 'text-emerald-500', bgActive: 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.15)]' },
+                { id: MEModule.CAPACITAME, label: t('modules.capacitame'), icon: GraduationCap, activeColor: 'text-indigo-500', bgActive: 'bg-indigo-500/10 border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.15)]' },
+                { id: MEModule.EVALUAME, label: t('modules.evaluame'), icon: ShieldCheck, activeColor: 'text-amber-500', bgActive: 'bg-amber-500/10 border-amber-500/30 shadow-[0_0_30px_rgba(245,158,11,0.15)]' },
+                { id: MEModule.CONSULTAME, label: t('modules.consultame'), icon: BarChart3, activeColor: 'text-rose-500', bgActive: 'bg-rose-500/10 border-rose-500/30 shadow-[0_0_30px_rgba(244,63,94,0.15)]' },
               ].map(mod => (
                 <button key={mod.id} onClick={() => setActiveModule(mod.id)}
                   className={`flex-1 min-w-[140px] md:min-w-[180px] p-4 rounded-2xl flex md:flex-row flex-col items-center justify-center gap-3 transition-all duration-300 border hover:-translate-y-1 ${
-                    activeModule === mod.id ? mod.bgActive : 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-400 hover:text-white hover:border-white/20'
+                    activeModule === mod.id ? mod.bgActive : 'bg-hub-card border-hub-border hover:bg-black/5 dark:hover:bg-white/10 text-hub-text-muted hover:text-hub-text'
                   }`}>
                   <mod.icon size={20} className={activeModule === mod.id ? mod.activeColor : 'opacity-70'} />
-                  <span className={`text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] ${activeModule === mod.id ? 'text-white' : ''}`}>
+                  <span className={`text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] ${activeModule === mod.id ? 'text-hub-text' : ''}`}>
                     {mod.label}
                   </span>
                 </button>
@@ -852,7 +945,10 @@ const App = () => {
 
             {/* ACTIVE MODULE RENDERER */}
             <div className="max-w-7xl mx-auto relative z-20">
-              {activeModule === MEModule.SIMPLIFICAME && <ModuleSimplificaME onEnterWorkspace={() => setActiveView('workspace')} langToggle={() => applyPreferredLang(i18n.language === 'es' ? 'en' : 'es')} />}
+              {activeModule === MEModule.SIMPLIFICAME && <ModuleSimplificaME maxPhaseReached={maxPhaseReached} onEnterWorkspace={(layerId) => {
+                  if (layerId && layerId <= maxPhaseReached) setActivePhase(layerId);
+                  setActiveView('workspace');
+              }} />}
               {activeModule === MEModule.GESTIONAME && <ModuleGestionaME />}
               {activeModule === MEModule.CAPACITAME && <ModuleCapacitaME />}
               {activeModule === MEModule.EVALUAME && <ModuleEvaluaME />}
@@ -870,7 +966,7 @@ const App = () => {
 
         {/* WORKSPACE */}
         {activeView === 'workspace' && (
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex overflow-hidden min-h-0">
             <section className="flex-1 overflow-y-auto p-10">
               {currentLayer ? (
                 <div className="max-w-2xl mx-auto">
@@ -920,7 +1016,7 @@ const App = () => {
             </section>
 
             {/* AURON PANEL PREMIUM REFACTOR */}
-            <aside className="w-[380px] flex-shrink-0 border-l flex flex-col relative"
+            <aside className="w-[480px] xl:w-[550px] flex-shrink-0 border-l flex flex-col relative min-h-0"
               style={{ background: 'rgba(2,4,10,0.65)', backdropFilter: 'blur(20px)', borderColor: T.border }}>
               
               {/* Resplandor superior sutil */}
@@ -931,7 +1027,7 @@ const App = () => {
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all"
-                      style={{ background: T.cyan, boxShadow: `0 0 30px ${T.cyanGlow}` }}>
+                      style={{ background: T.cyan, boxShadow: `0 0 30px rgba(0,229,255,0.15)` }}>
                       <Brain size={22} className="text-black" />
                     </div>
                     <div>
@@ -953,12 +1049,12 @@ const App = () => {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 relative z-10 scrollbar-thin">
-                {messages.map((m, i) => <AuronMsg key={i} msg={m} />)}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 relative z-10 scrollbar-thin min-h-0">
+                {messages.map((m, i) => <AuronMsg key={i} msg={m} onOptionSelect={setInput} />)}
                 {auronLoading && (
                   <div className="flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="w-9 h-9 rounded-[14px] flex items-center justify-center text-sm font-black text-black mt-1 flex-shrink-0" 
-                      style={{ background: T.cyan, boxShadow: `0 0 15px ${T.cyanGlow}` }}>
+                      style={{ background: T.cyan, boxShadow: `0 0 15px rgba(0,229,255,0.15)` }}>
                       A
                     </div>
                     <div className="px-6 py-4 rounded-2xl rounded-tl-sm flex items-center gap-2.5"
@@ -971,6 +1067,19 @@ const App = () => {
               </div>
 
               <div className="p-6 border-t relative z-10" style={{ borderColor: T.border2, background: 'rgba(0,0,0,0.2)' }}>
+                {/* AI DISCLAIMER (LEGAL & ETHICS - COLLAPSED) */}
+                <details className="mb-4 group">
+                  <summary className="flex items-center gap-2 cursor-pointer text-[10px] text-amber-500/60 hover:text-amber-500 transition-colors list-none marker:hidden select-none outline-none">
+                    <AlertCircle size={12} className="group-open:text-amber-400 transition-colors" />
+                    <span className="font-bold uppercase tracking-widest">Aviso Legal IA</span>
+                  </summary>
+                  <div className="mt-3 p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl animate-in fade-in slide-in-from-top-1 duration-200">
+                    <p className="text-[9px] leading-relaxed text-amber-500/80 font-medium">
+                      Auron es un Asistente Predictivo impulsado por Inteligencia Artificial. Las recomendaciones estratégicas deben ser analizadas y aprobadas por la Alta Dirección antes de su ejecución. <span className="font-bold text-amber-400">ConstruyeME y su empresa operativa no asumen responsabilidad legal, financiera ni operativa por la toma de decisiones basada exclusivamente en estas sugerencias.</span>
+                    </p>
+                  </div>
+                </details>
+                
                 <form onSubmit={handleConsultation}
                   className="flex items-center gap-3 rounded-2xl px-2 py-2 transition-all focus-within:ring-2"
                   style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.border2}`, paddingLeft: 16 }}>
@@ -985,7 +1094,7 @@ const App = () => {
                     style={{ color: T.text }} />
                   <button type="submit" disabled={auronLoading}
                     className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all hover:brightness-125 hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
-                    style={{ background: T.cyan, boxShadow: `0 4px 15px ${T.cyanGlow}` }}>
+                    style={{ background: T.cyan, boxShadow: `0 4px 15px rgba(0,229,255,0.15)` }}>
                     <Send size={16} className="text-black ml-0.5" />
                   </button>
                 </form>
@@ -993,6 +1102,7 @@ const App = () => {
                   {t('auron:advance.hint')}
                 </p>
               </div>
+
             </aside>
           </div>
         )}
@@ -1138,6 +1248,16 @@ const App = () => {
             </div>
           </div>
         )}
+
+        {/* NEURO DOCK (GLOBAL) */}
+        <div className="absolute bottom-[20px] left-1/2 -translate-x-1/2 flex items-end gap-3 z-50">
+          <FloatingGoogleSync />
+          <FloatingNeuroNotes />
+          <FloatingMail />
+          <FloatingTaskManager />
+          <FocusRadio />
+        </div>
+
       </div>
 
       {/* FOOTER */}

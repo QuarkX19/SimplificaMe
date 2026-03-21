@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
+import { CMIDashboard } from '../matrices/CMIDashboard';
 
 export const ModuleConsultaME: React.FC = () => {
   const { t } = useTranslation();
@@ -70,6 +71,11 @@ export const ModuleConsultaME: React.FC = () => {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* CMI Dashboard Transpuesto */}
+      <div className="mt-8">
+        <CMIDashboard />
       </div>
     </div>
   );

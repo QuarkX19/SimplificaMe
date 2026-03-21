@@ -4,17 +4,26 @@ import { Zap, Globe, RefreshCw, TrendingUp, AlertCircle, BarChart3, BrainCircuit
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { AuditoriaData, InsightMessage, LayerStatus, LayerNodeProps } from './hub.types';
 
-const LayerNode: React.FC<LayerNodeProps> = ({ title, status, value }) => (
-  <div className="bg-black/40 border border-white/5 p-6 rounded-[2rem] hover:border-[#00ffff]/30 transition-all group relative overflow-hidden">
-    <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-transparent via-[#00ffff22] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-    <p className="text-[8px] text-slate-500 uppercase font-black mb-1 tracking-widest">{title}</p>
-    <p className="text-white font-bold text-lg">{value}</p>
+export interface LayerNodeElementProps extends LayerNodeProps {
+  onClick?: () => void;
+  isLocked?: boolean;
+}
+
+const LayerNode: React.FC<LayerNodeElementProps> = ({ title, status, value, onClick, isLocked }) => (
+  <button 
+    onClick={onClick}
+    disabled={isLocked}
+    className={`w-full text-left bg-black/5 dark:bg-black/40 border border-hub-border p-6 rounded-[2rem] transition-all group relative overflow-hidden shadow-sm ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:border-hub-cyan/30 hover:-translate-y-1 cursor-pointer'}`}
+  >
+    <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-transparent via-hub-cyan/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+    <p className="text-[8px] text-hub-text-muted uppercase font-black mb-1 tracking-widest">{title}</p>
+    <p className="text-hub-text font-bold text-lg">{value}</p>
     <div className={`mt-4 h-1 w-12 rounded-full ${
       status === LayerStatus.OK ? 'bg-[#28a745] shadow-[0_0_8px_#28a745]' : 
       status === LayerStatus.ALERT ? 'bg-yellow-500 shadow-[0_0_8px_#eab308]' : 
       'bg-red-500 shadow-[0_0_8px_#ef4444]'
     }`} />
-  </div>
+  </button>
 );
 
 const NeuroConnector = () => (
@@ -22,11 +31,11 @@ const NeuroConnector = () => (
 );
 
 interface ModuleSimplificaMEProps {
-  onEnterWorkspace: () => void;
-  langToggle: () => void;
+  onEnterWorkspace: (layerId?: number) => void;
+  maxPhaseReached: number;
 }
 
-export const ModuleSimplificaME: React.FC<ModuleSimplificaMEProps> = ({ onEnterWorkspace, langToggle }) => {
+export const ModuleSimplificaME: React.FC<ModuleSimplificaMEProps> = ({ onEnterWorkspace, maxPhaseReached }) => {
   const { t } = useTranslation();
   
   const [auditoriaGlobal] = useState<AuditoriaData>({
@@ -65,46 +74,43 @@ export const ModuleSimplificaME: React.FC<ModuleSimplificaMEProps> = ({ onEnterW
       
       {/* BOTÓN ENTRAR AL ENTORNO ESTRATÉGICO (Punto de acceso vital) */}
       <div className="flex justify-end">
-        <button onClick={onEnterWorkspace}
-          className="group relative px-8 py-4 bg-[#00ffff]/10 border border-[#00ffff]/30 rounded-2xl flex items-center gap-4 hover:bg-[#00ffff]/20 hover:scale-[1.02] transition-all overflow-hidden shadow-[0_0_30px_#00ffff15]">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#00ffff]/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
-          <BrainCircuit className="text-[#00ffff]" />
+        <button onClick={() => onEnterWorkspace()}
+          className="group relative px-8 py-4 bg-hub-cyan/10 border border-hub-cyan/30 rounded-2xl flex items-center gap-4 hover:bg-hub-cyan/20 hover:scale-[1.02] transition-all overflow-hidden shadow-[0_0_30px_var(--cyan-glow)]">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-hub-cyan/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+          <BrainCircuit className="text-hub-cyan" />
           <div className="text-left">
-            <span className="block text-[#00ffff] font-black uppercase tracking-widest text-sm">INGRESAR AL ENTORNO ESTRATÉGICO</span>
-            <span className="block text-slate-400 font-bold tracking-widest text-[9px] uppercase">Ejecutar Capas AFSE x Auron</span>
+            <span className="block text-hub-cyan font-black uppercase tracking-widest text-sm">INGRESAR AL ENTORNO ESTRATÉGICO</span>
+            <span className="block text-hub-text-muted font-bold tracking-widest text-[9px] uppercase">Ejecutar Capas AFSE x Auron</span>
           </div>
         </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-[#050811] border border-white/5 rounded-[3rem] p-10 relative overflow-hidden shadow-2xl">
+        <div className="lg:col-span-2 bg-hub-card border border-hub-border rounded-[3rem] p-10 relative overflow-hidden shadow-2xl">
           <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none">
-            <Zap size={240} className="text-[#00ffff]" />
+            <Zap size={240} className="text-hub-cyan" />
           </div>
           
           <div className="flex justify-between items-start mb-8 z-10 relative">
             <div>
-              <h3 className="text-[#00ffff] font-black text-xs uppercase tracking-[0.4em] mb-2">{t('ui.predictive_audit')}</h3>
-              <p className="text-slate-400 text-[10px] font-mono">{t('ui.neuro_engine')}</p>
+              <h3 className="text-hub-cyan font-black text-xs uppercase tracking-[0.4em] mb-2">{t('ui.predictive_audit')}</h3>
+              <p className="text-hub-text-muted text-[10px] font-mono">{t('ui.neuro_engine')}</p>
             </div>
             <div className="flex gap-4">
-              <button onClick={langToggle} className="p-3 bg-white/5 rounded-full hover:bg-white/10 transition-colors group">
-                <Globe size={18} className="text-white/40 group-hover:text-white" />
-              </button>
-              <button onClick={handleSync} disabled={isSyncing} className="p-3 bg-white/5 rounded-full hover:bg-[#00ffff]/10 transition-colors group disabled:opacity-50">
-                <RefreshCw size={18} className={`text-white/40 group-hover:text-[#00ffff] ${isSyncing ? 'animate-spin' : ''}`} />
+              <button onClick={handleSync} disabled={isSyncing} className="p-3 bg-black/5 dark:bg-white/5 rounded-full hover:bg-hub-cyan/10 transition-colors group disabled:opacity-50 border border-hub-border">
+                <RefreshCw size={18} className={`text-hub-text-muted group-hover:text-hub-cyan ${isSyncing ? 'animate-spin' : ''}`} />
               </button>
             </div>
           </div>
 
           <div className="flex items-end gap-8 mb-10 z-10 relative">
             <div>
-              <p className="text-8xl font-black text-white italic tracking-tighter leading-none">
-                {auditoriaGlobal.cumplimiento}<span className="text-4xl not-italic ml-1 text-[#00ffff]">%</span>
+              <p className="text-8xl font-black text-hub-text italic tracking-tighter leading-none">
+                {auditoriaGlobal.cumplimiento}<span className="text-4xl not-italic ml-1 text-hub-cyan">%</span>
               </p>
             </div>
             <div className="pb-2">
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t('ui.current_compliance')}</p>
+              <p className="text-[10px] text-hub-text-muted font-bold uppercase tracking-wider">{t('ui.current_compliance')}</p>
               <div className="flex items-center gap-2 mt-1">
                 <TrendingUp size={14} className="text-[#28a745]" />
                 <p className="text-[#28a745] text-xs font-black italic">{t('ui.vs_last_month')}</p>
@@ -114,12 +120,12 @@ export const ModuleSimplificaME: React.FC<ModuleSimplificaMEProps> = ({ onEnterW
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 z-10 relative">
             <div className="space-y-6">
-              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-blue-600 to-[#00ffff] shadow-[0_0_15px_#00ffff]" style={{ width: `${auditoriaGlobal.cumplimiento}%` }} />
+              <div className="h-2 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-blue-600 to-hub-cyan shadow-[0_0_15px_var(--cyan-glow)]" style={{ width: `${auditoriaGlobal.cumplimiento}%` }} />
               </div>
-              <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+              <div className="flex justify-between items-center text-[10px] font-bold text-hub-text-muted uppercase tracking-widest">
                 <span>{t('ui.baseline_alpha')}</span>
-                <span className="text-white">{t('ui.optimum_delta')}</span>
+                <span className="text-hub-text">{t('ui.optimum_delta')}</span>
               </div>
             </div>
             <div className="h-32 w-full">
@@ -127,43 +133,43 @@ export const ModuleSimplificaME: React.FC<ModuleSimplificaMEProps> = ({ onEnterW
                 <AreaChart data={performanceData}>
                   <defs>
                     <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#00ffff" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#00ffff" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="var(--cyan-hub)" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="var(--cyan-hub)" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <Area type="monotone" dataKey="value" stroke="#00ffff" fillOpacity={1} fill="url(#colorVal)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="value" stroke="var(--cyan-hub)" fillOpacity={1} fill="url(#colorVal)" strokeWidth={3} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#0a0f1d] to-black border border-[#00ffff]/20 rounded-[3rem] p-10 flex flex-col justify-between shadow-xl relative overflow-hidden group">
-          <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-[#00ffff]/5 blur-[80px] rounded-full group-hover:bg-[#00ffff]/10 transition-all duration-700"></div>
+        <div className="bg-gradient-to-br from-hub-bg to-hub-card border border-hub-cyan/20 rounded-[3rem] p-10 flex flex-col justify-between shadow-xl relative overflow-hidden group">
+          <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-hub-cyan/5 blur-[80px] rounded-full group-hover:bg-hub-cyan/10 transition-all duration-700"></div>
           
           <div className="flex justify-between items-center z-10">
-            <span className="text-[9px] text-[#00ffff] font-black uppercase tracking-widest bg-[#00ffff]/10 px-4 py-1.5 rounded-full border border-[#00ffff]/20">{t('ui.status_ia')}</span>
-            <div className="w-2 h-2 rounded-full bg-[#00ffff] shadow-[0_0_10px_#00ffff] animate-pulse"></div>
+            <span className="text-[9px] text-hub-cyan font-black uppercase tracking-widest bg-hub-cyan/10 px-4 py-1.5 rounded-full border border-hub-cyan/20">{t('ui.status_ia')}</span>
+            <div className="w-2 h-2 rounded-full bg-hub-cyan shadow-[0_0_10px_var(--cyan-glow)] animate-pulse"></div>
           </div>
 
           <div className="mt-8 z-10">
-            <p className="text-white text-2xl font-black italic uppercase leading-tight mb-4">
+            <p className="text-hub-text text-2xl font-black italic uppercase leading-tight mb-4">
               {t('ui.projection')} <br/>
               <span className="text-[#ef4444] text-3xl">{t('ui.out_of_target')}</span>
             </p>
             
             <div className="space-y-3">
               {auditoriaGlobal.alertas.map((alerta, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
+                <div key={idx} className="flex items-center gap-3 p-3 bg-black/5 dark:bg-white/5 rounded-xl border border-hub-border">
                   <AlertCircle size={14} className="text-[#ef4444]" />
-                  <span className="text-[10px] text-slate-300 font-medium">{alerta}</span>
+                  <span className="text-[10px] text-hub-text-muted font-medium">{alerta}</span>
                 </div>
               ))}
             </div>
 
-            <div className="mt-8 bg-black/40 p-4 rounded-2xl border border-white/5">
-              <span className="text-[#00ffff] text-[10px] font-mono font-bold block mb-1">{t('ui.auron_log')}:</span>
-              <p className="text-slate-400 text-[10px] leading-relaxed font-mono">
+            <div className="mt-8 bg-black/5 dark:bg-black/40 p-4 rounded-2xl border border-hub-border shadow-inner">
+              <span className="text-hub-cyan text-[10px] font-mono font-bold block mb-1">{t('ui.auron_log')}:</span>
+              <p className="text-hub-text-muted text-[10px] leading-relaxed font-mono">
                 {insights[insights.length - 1]?.text}
               </p>
             </div>
@@ -171,33 +177,33 @@ export const ModuleSimplificaME: React.FC<ModuleSimplificaMEProps> = ({ onEnterW
         </div>
       </div>
 
-      <div className="bg-[#050811] border border-white/5 rounded-[3rem] p-10 shadow-2xl relative">
+      <div className="bg-hub-card border border-hub-border rounded-[3rem] p-10 shadow-2xl relative">
         <div className="flex items-center justify-between mb-10">
-          <h3 className="text-white font-black text-xs uppercase tracking-widest flex items-center gap-3">
-            <BarChart3 size={16} className="text-[#00ffff]"/> {t('ui.strategic_flow')}
+          <h3 className="text-hub-text font-black text-xs uppercase tracking-widest flex items-center gap-3">
+            <BarChart3 size={16} className="text-hub-cyan"/> {t('ui.strategic_flow')}
           </h3>
           <div className="flex items-center gap-4">
              <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-[#28a745]"></div>
-                <span className="text-[8px] text-slate-500 font-bold uppercase">{t('ui.optimal')}</span>
+                <span className="text-[8px] text-hub-text-muted font-bold uppercase">{t('ui.optimal')}</span>
              </div>
              <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                <span className="text-[8px] text-slate-500 font-bold uppercase">{t('ui.warning')}</span>
+                <span className="text-[8px] text-hub-text-muted font-bold uppercase">{t('ui.warning')}</span>
              </div>
           </div>
         </div>
 
         <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <NeuroConnector />
-          <LayerNode title={t('ui.layer_l1')} status={LayerStatus.OK} value={t('ui.iso_context')} />
-          <LayerNode title={t('ui.layer_l2')} status={LayerStatus.ALERT} value={t('ui.gap_analysis_val')} />
-          <LayerNode title={t('ui.layer_l3')} status={LayerStatus.OK} value={t('ui.mission_vision')} />
-          <LayerNode title={t('ui.layer_l4')} status={LayerStatus.OK} value={t('ui.bsc_map')} />
-          <LayerNode title={t('ui.layer_l5')} status={LayerStatus.ALERT} value={t('ui.cmi_risks')} />
-          <LayerNode title={t('ui.layer_l6')} status={LayerStatus.OK} value={t('ui.okrs_agile')} />
-          <LayerNode title={t('ui.layer_l7')} status={LayerStatus.OK} value={t('ui.real_time_sync')} />
-          <LayerNode title={t('ui.layer_l8')} status={LayerStatus.OK} value={t('ui.pdca_cycle')} />
+          <div className="hidden md:block absolute top-1/2 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-hub-border to-transparent -z-10" />
+          <LayerNode title={t('ui.layer_l1')} status={LayerStatus.OK} value={t('ui.iso_context')} onClick={() => onEnterWorkspace(1)} isLocked={maxPhaseReached < 1} />
+          <LayerNode title={t('ui.layer_l2')} status={LayerStatus.ALERT} value={t('ui.gap_analysis_val')} onClick={() => onEnterWorkspace(2)} isLocked={maxPhaseReached < 2} />
+          <LayerNode title={t('ui.layer_l3')} status={LayerStatus.OK} value={t('ui.mission_vision')} onClick={() => onEnterWorkspace(3)} isLocked={maxPhaseReached < 3} />
+          <LayerNode title={t('ui.layer_l4')} status={LayerStatus.OK} value={t('ui.bsc_map')} onClick={() => onEnterWorkspace(4)} isLocked={maxPhaseReached < 4} />
+          <LayerNode title={t('ui.layer_l5')} status={LayerStatus.ALERT} value={t('ui.cmi_risks')} onClick={() => onEnterWorkspace(5)} isLocked={maxPhaseReached < 5} />
+          <LayerNode title={t('ui.layer_l6')} status={LayerStatus.OK} value={t('ui.okrs_agile')} onClick={() => onEnterWorkspace(6)} isLocked={maxPhaseReached < 6} />
+          <LayerNode title={t('ui.layer_l7')} status={LayerStatus.OK} value={t('ui.real_time_sync')} onClick={() => onEnterWorkspace(7)} isLocked={maxPhaseReached < 7} />
+          <LayerNode title={t('ui.layer_l8')} status={LayerStatus.OK} value={t('ui.pdca_cycle')} onClick={() => onEnterWorkspace(8)} isLocked={maxPhaseReached < 8} />
         </div>
       </div>
     </div>
