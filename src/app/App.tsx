@@ -19,12 +19,18 @@ import { FloatingTaskManager } from "../ui/components/FloatingTaskManager";
 import { FloatingMail } from "../ui/components/FloatingMail";
 import { FloatingNeuroNotes } from "../ui/components/FloatingNeuroNotes";
 import { FloatingGoogleSync } from "../ui/components/FloatingGoogleSync";
+import { FloatingFinance } from "../ui/components/FloatingFinance";
+import { FloatingCalculator } from "../ui/components/FloatingCalculator";
+import { FloatingCall } from "../ui/components/FloatingCall";
+import { FloatingAI } from "../ui/components/FloatingAI";
+import { FloatingAgenda } from "../ui/components/FloatingAgenda";
+import { FloatingBreaks } from "../ui/components/FloatingBreaks";
 import {
   Lock, Activity, LogOut, ShieldCheck,
   BarChart3, Cpu, TrendingUp, AlertCircle, Terminal,
   RefreshCw, Network, Eye, Target, Brain,
   Layers, GraduationCap, ClipboardCheck, MessageSquare,
-  ArrowRight, Star, Settings, Mic, MicOff, Send
+  ArrowRight, Star, Settings, Mic, MicOff, Send, Paperclip, X, Building
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
@@ -40,12 +46,13 @@ import { ModuleConsultaME } from "../ui/hub/ModuleConsultaME";
 import { getLayerById, getAllLayers } from "../core/methodology/methodology.engine";
 import { validateLayer } from "../core/methodology/layer.validator";
 import {
-  getUserCompany, getActiveCycle, saveLayerProgress,
+  getUserCompany, getUserCompanies, getActiveCycle, saveLayerProgress,
   getActivePhase, type Company, type AfseCycle,
 } from "../services/company";
 import { buildEnrichedAuronContext, saveAuronMessage } from "../services/auronMemory";
 import SuperAdminPanel from "./SuperAdminPanel";
 import SignupScreen from "./SignupScreen";
+import { OnboardingScreen } from "./OnboardingScreen";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 type MsgRole = 'user' | 'auron';
@@ -298,25 +305,15 @@ const AuronMsg: React.FC<{ msg: ChatMsg, onOptionSelect?: (text: string) => void
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
 type Theme = 'dark' | 'light';
 
-const DARK_T = {
-  bg:'#06090F', bg2:'#0A0E18', bg3:'#0F1420',
-  bgCard:'rgba(10,14,24,0.97)',
-  border:'rgba(255,255,255,0.06)', border2:'rgba(255,255,255,0.12)',
+const PRO_DARK = {
+  bg:'#030509', bg2:'rgba(11, 15, 25, 0.7)', bg3:'#0B0F19',
+  bgCard:'rgba(11, 15, 25, 0.6)',
+  border:'rgba(36, 61, 90, 0.6)', border2:'rgba(255,255,255,0.06)',
   cyan:'#00E5FF', cyanGlow:'rgba(0,229,255,0.20)', cyanRing:'rgba(0,229,255,0.10)',
   green:'#00E676', text:'#F1F5F9', textMid:'#94A3B8', textDim:'#475569',
-  error:'#FF3D57', shadow:'0 40px 100px rgba(0,0,0,0.60)',
-  mesh1:'rgba(0,229,255,0.07)', mesh2:'rgba(124,77,255,0.05)',
-  grid:'rgba(0,229,255,0.02)', ring:'rgba(0,229,255,0.04)',
-};
-const LIGHT_T = {
-  bg:'#F0F4FA', bg2:'#FFFFFF', bg3:'#E8EEF6',
-  bgCard:'rgba(255,255,255,0.98)',
-  border:'rgba(0,0,0,0.07)', border2:'rgba(0,0,0,0.14)',
-  cyan:'#0088BB', cyanGlow:'rgba(0,136,187,0.15)', cyanRing:'rgba(0,136,187,0.10)',
-  green:'#00875A', text:'#0F172A', textMid:'#475569', textDim:'#94A3B8',
-  error:'#DC2626', shadow:'0 24px 80px rgba(0,0,0,0.12)',
-  mesh1:'rgba(0,136,187,0.06)', mesh2:'rgba(124,77,255,0.04)',
-  grid:'rgba(0,136,187,0.03)', ring:'rgba(0,136,187,0.03)',
+  error:'#FF3D57', shadow:'0 30px 80px -20px rgba(0,229,255,0.15)',
+  mesh1:'rgba(0,229,255,0.15)', mesh2:'rgba(0,48,135,0.3)',
+  grid:'rgba(0,229,255,0.05)', ring:'rgba(0,229,255,0.04)',
 };
 
 const LoginScreen: React.FC<{ email: string; setEmail: (v: string) => void }> = ({ email, setEmail }) => {
@@ -325,19 +322,10 @@ const LoginScreen: React.FC<{ email: string; setEmail: (v: string) => void }> = 
   const [loading, setLoading] = React.useState(false);
   const [error, setError]     = React.useState('');
   const [focused, setFocused] = React.useState(false);
-  const [theme, setTheme]     = React.useState<Theme>(() =>
-    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-  );
 
-  const C = theme === 'dark' ? DARK_T : LIGHT_T;
+  const C = PRO_DARK; // Hardcoded PRO Dark Theme
+  const theme = 'dark';
   const currentLang = i18n.language.slice(0, 2);
-
-  React.useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const h = (e: MediaQueryListEvent) => setTheme(e.matches ? 'dark' : 'light');
-    mq.addEventListener('change', h);
-    return () => mq.removeEventListener('change', h);
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -371,13 +359,6 @@ const LoginScreen: React.FC<{ email: string; setEmail: (v: string) => void }> = 
 
       {/* Top-right controls */}
       <div style={{ position:'fixed', top:20, right:20, zIndex:100, display:'flex', alignItems:'center', gap:8 }}>
-        {/* Theme toggle */}
-        <button
-          onClick={() => setTheme(th => th === 'dark' ? 'light' : 'dark')}
-          title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-          style={{ width:40, height:40, borderRadius:12, border:'1px solid ' + C.border2, background:C.bg2, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, transition:'all 0.2s' }}>
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
         {/* Lang switcher */}
         <div style={{ display:'flex', alignItems:'center', gap:2, padding:4, borderRadius:12, background:C.bg2, border:'1px solid ' + C.border2 }}>
           {(['es','en']).map(lang => {
@@ -405,16 +386,26 @@ const LoginScreen: React.FC<{ email: string; setEmail: (v: string) => void }> = 
           {t('brand.company')}
         </p>
         <h1 style={{ fontFamily:"'Syne', sans-serif", fontSize:'clamp(40px,10vw,54px)', fontWeight:900, letterSpacing:'-0.02em', lineHeight:1, textAlign:'center', margin:'0 0 8px', color:C.text }}>
-          Arquitectura
-          <span style={{ color:C.cyan, filter:'drop-shadow(0 0 24px ' + C.cyanGlow + ')' }}>ME</span>
+          {t('brand.name')}
+          <span style={{ color:C.cyan, filter:'drop-shadow(0 0 24px ' + C.cyanGlow + ')' }}>{t('brand.accent')}</span>
           <sup style={{ fontSize:20, fontWeight:700, color:C.textDim, verticalAlign:'super' }}>™</sup>
         </h1>
-        <p style={{ fontSize:11, fontWeight:700, letterSpacing:'0.35em', textTransform:'uppercase' as const, color:C.textDim, marginBottom:32 }}>
+        <p style={{ fontSize:11, fontWeight:700, letterSpacing:'0.35em', textTransform:'uppercase' as const, color:C.textDim, marginBottom:16 }}>
           {t('brand.tagline')}
         </p>
 
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, background: theme === 'dark' ? 'rgba(0,229,255,0.05)' : 'rgba(0,136,187,0.05)', padding:'10px 16px', borderRadius:16, border:'1px solid ' + C.cyanRing, marginBottom:32, cursor:'default', transition:'all 0.3s' }}>
+           <div style={{ width:28, height:28, borderRadius:14, background:C.cyanGlow, display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid '+C.cyanRing }}>
+             <span style={{ fontSize:12, fontWeight:900, color:C.cyan }}>A</span>
+           </div>
+           <div style={{ textAlign: 'left' }}>
+             <p style={{ fontSize:11.5, fontWeight:600, color:C.textMid, lineHeight:1.3 }}>{t('common:brand.slogan')}<br/><span style={{ color:C.cyan, fontWeight:800 }}>{t('common:brand.sloganAccent')}</span></p>
+           </div>
+        </div>
+
         {/* Card */}
-        <div style={{ width:'100%', borderRadius:24, padding:32, background:C.bgCard, border:'1px solid ' + C.border2, boxShadow:C.shadow, backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)' }}>
+        <div className="relative rounded-[31px] p-8 w-full backdrop-blur-3xl shadow-2xl" 
+             style={{ background: C.bgCard, boxShadow: C.shadow, border: `1px solid rgba(255,255,255,0.02)` }}>
 
           {/* Card header */}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginBottom:24 }}>
@@ -519,7 +510,8 @@ const App = () => {
   const [loginEmail, setLoginEmail]           = useState('');
   const [urlPlan]                             = useState(() => new URLSearchParams(window.location.search).get('plan'));
   const [showSignup, setShowSignup]           = useState(!!urlPlan);
-  const [theme, setTheme]                     = useState<'dark' | 'light'>(() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const [companies, setCompanies]             = useState<Company[]>([]);
+  const [showOnboarding, setShowOnboarding]   = useState(false);
   const [company, setCompany]                 = useState<Company | null>(null);
   const [cycle, setCycle]                     = useState<AfseCycle | null>(null);
   const [activePhase, setActivePhase]         = useState(1);
@@ -530,6 +522,7 @@ const App = () => {
   const [auronLoading, setAuronLoading]       = useState(false);
   const [isListening, setIsListening]         = useState(false);
   const [isSuperAdmin, setIsSuperAdmin]       = useState(false);
+  const [userLevel, setUserLevel]             = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // ─── SPEECH TO TEXT (MICRÓFONO) ─────────────────────────────────────────────
@@ -569,6 +562,23 @@ const App = () => {
   const [activeModule, setActiveModule]       = useState<MEModule>(MEModule.SIMPLIFICAME);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  // Auron Consultor File Upload State
+  const [auronAttachedFile, setAuronAttachedFile] = useState<{name: string, content: string} | null>(null);
+  const auronFileRef = useRef<HTMLInputElement>(null);
+
+  const handleAuronUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      setAuronAttachedFile({ name: file.name, content: text });
+    };
+    reader.readAsText(file);
+    if (auronFileRef.current) auronFileRef.current.value = '';
+  };
+
   const currentLayer = useMemo(() => getLayerById(activePhase), [activePhase]);
   const layers       = useMemo(() => getAllLayers(), []);
   const afseScore    = company?.afse_score ?? 0;
@@ -591,40 +601,44 @@ const App = () => {
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      root.style.colorScheme = 'dark';
-    } else {
-      root.classList.remove('dark');
-      root.style.colorScheme = 'light';
-    }
-  }, [theme]);
+    root.classList.add('dark');
+    root.style.colorScheme = 'dark';
+  }, []);
 
   useEffect(() => {
     if (!sessionUser) return;
     (async () => {
       const { data: adminCheck } = await supabase.rpc('is_super_admin');
       setIsSuperAdmin(!!adminCheck);
-      const userCompany = await getUserCompany(sessionUser.id);
-      if (!userCompany) return;
-      setCompany(userCompany);
+      
+      const userCompaniesList = await getUserCompanies(sessionUser.id);
+      if (userCompaniesList.length === 0) {
+        setShowOnboarding(true);
+        return;
+      }
+      setCompanies(userCompaniesList);
+      
+      const currentCompany = company || userCompaniesList[0];
+      setCompany(currentCompany);
+      localStorage.setItem('auron_current_company_id', currentCompany.id);
 
       // ← Aplicar idioma preferido del perfil
       const { data: member } = await supabase
         .from('company_members')
-        .select('preferred_lang')
+        .select('preferred_lang, me_level')
         .eq('user_id', sessionUser.id)
         .single();
       await applyPreferredLang(member?.preferred_lang);
+      setUserLevel(member?.me_level || 'operativo');
 
-      const activeCycle = await getActiveCycle(userCompany.id);
+      const activeCycle = await getActiveCycle(currentCompany.id);
       if (!activeCycle) return;
       setCycle(activeCycle);
-      const { activePhase: ap, maxPhase: mp } = await getActivePhase(userCompany.id, activeCycle.id);
+      const { activePhase: ap, maxPhase: mp } = await getActivePhase(currentCompany.id, activeCycle.id);
       setActivePhase(ap); setMaxPhaseReached(mp);
       setMessages([{
         role: 'auron',
-        text: t('auron:greeting', { company: userCompany.name, layer: String(ap).padStart(2,'0'), score: userCompany.afse_score?.toFixed(0) ?? '0' }),
+        text: t('auron:greeting', { company: currentCompany.name, layer: String(ap).padStart(2,'0'), score: currentCompany.afse_score?.toFixed(0) ?? '0' }),
         ts: new Date().toLocaleTimeString('es-CO'),
       }]);
     })();
@@ -643,24 +657,33 @@ const App = () => {
 
   const handleConsultation = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !sessionUser || !currentLayer) return;
+    if ((!input.trim() && !auronAttachedFile) || !sessionUser || !currentLayer) return;
     const userText = input.trim();
     const ts = new Date().toLocaleTimeString('es-CO');
-    setMessages(prev => [...prev, { role: 'user', text: userText, ts }]);
-    setInput(''); setAuronLoading(true);
-    if (company && cycle) await saveAuronMessage(company.id, cycle.id, sessionUser.id, activePhase, 'user', userText);
+    
+    const displayMsg = auronAttachedFile 
+      ? userText ? `${userText}\n\n[📎 Documento: ${auronAttachedFile.name}]` : `[📎 Documento Analizado: ${auronAttachedFile.name}]` 
+      : userText;
+
+    let finalPrompt = userText;
+    if (auronAttachedFile) {
+      finalPrompt += `\n\n[DATOS ADJUNTOS DEL ARCHIVO ${auronAttachedFile.name}]:\n${auronAttachedFile.content}`;
+    }
+
+    setMessages(prev => [...prev, { role: 'user', text: displayMsg, ts }]);
+    setInput(''); setAuronLoading(true); setAuronAttachedFile(null);
+    if (company && cycle) await saveAuronMessage(company.id, cycle.id, sessionUser.id, activePhase, 'user', displayMsg);
     try {
       const systemPrompt = company && cycle
         ? await buildEnrichedAuronContext(company.id, company.name, activePhase, currentLayer.code, currentLayer.objective, cycle.id)
         : buildChatContext(currentLayer, 'DIRECTOR', sessionUser.email ?? 'Director', 'USTED');
       
-      // Mapear historial en formato nativo para mantener el hilo de la charla sin alucinaciones
       const geminiHistory = messages.map(m => ({ 
         role: m.role === 'auron' ? 'model' : 'user' as "model"|"user", 
         parts: [{ text: m.text }] as [{ text: string }] 
       }));
 
-      let response = await getAuronResponse(userText, { systemPrompt, history: geminiHistory });
+      let response = await getAuronResponse(finalPrompt + "\n\nAnaliza y procesa los datos adjuntos en esta consulta como un experto analista corporativo si es que hay datos incluidos.", { systemPrompt, history: geminiHistory });
       
       // AUTO-ADVANCE INTERCEPTOR (Driven by Auron's Brain)
       if (response.includes('[ACTION: ADVANCE_LAYER]')) {
@@ -720,6 +743,10 @@ const App = () => {
       return <SignupScreen initialPlan={urlPlan || 'esencial'} onBackToLogin={() => setShowSignup(false)} />;
     }
     return <LoginScreen email={loginEmail} setEmail={setLoginEmail} />;
+  }
+
+  if (showOnboarding) {
+    return <OnboardingScreen user={sessionUser} onComplete={() => { setShowOnboarding(false); window.location.reload(); }} />;
   }
 
   // ── ADMIN ────────────────────────────────────────────────────────────────────
@@ -810,6 +837,40 @@ const App = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* COMPANY SWITCHER */}
+          {companies.length > 0 && (
+            <div className="relative group/switcher cursor-pointer">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all hover:bg-white/5"
+                style={{ background: 'rgba(255,255,255,0.02)', borderColor: T.border2 }}>
+                <Building size={14} style={{ color: T.cyan }} />
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-300 max-w-[120px] truncate">
+                  {company?.name}
+                </span>
+              </div>
+              
+              <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl border p-2 shadow-2xl opacity-0 invisible group-hover/switcher:opacity-100 group-hover/switcher:visible transition-all duration-300 z-[100] transform origin-top-right group-hover/switcher:scale-100 scale-95"
+                style={{ background: 'rgba(6,9,15,0.95)', backdropFilter: 'blur(30px)', borderColor: T.border }}>
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 px-3 pb-2 pt-1">{t('common:onboarding.myEnvironments')}</div>
+                <div className="space-y-1">
+                  {companies.map(c => (
+                    <button key={c.id} onClick={() => { setCompany(c); setActiveView('hub'); }}
+                      className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-colors hover:bg-white/10"
+                      style={{ color: company?.id === c.id ? T.cyan : T.textMid }}>
+                      <Target size={12} className={company?.id === c.id ? "text-cyan-400" : "text-transparent"} />
+                      <span className="truncate">{c.name}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="h-px bg-white/10 my-2"></div>
+                <button onClick={() => setShowOnboarding(true)}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-colors text-emerald-400 hover:bg-emerald-500/10">
+                  <div className="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 font-black">+</div>
+                  {t('common:onboarding.registerEnvironment')}
+                </button>
+              </div>
+            </div>
+          )}
+
           <LanguageSwitcher userId={sessionUser.id} />
           <div className="hidden sm:flex items-center gap-2.5 px-4 py-2 rounded-xl"
             style={{ background: `${afseStatus.color}08`, border: `1px solid ${afseStatus.color}20` }}>
@@ -899,13 +960,8 @@ const App = () => {
               </div>
 
               <div className="flex items-center gap-6 md:ml-auto">
-                <div className="flex gap-2 mr-4 bg-hub-card p-1.5 rounded-2xl border border-hub-border shadow-sm">
-                  <button onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-hub-text-muted hover:text-hub-text">
-                    {theme === 'dark' ? '☀️' : '🌙'}
-                  </button>
-                  <button onClick={() => applyPreferredLang(i18n.language.startsWith('es') ? 'en' : 'es')} className="p-2 w-10 text-center rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-hub-text-muted hover:text-hub-text font-bold text-xs uppercase">
-                    {i18n.language.startsWith('es') ? 'EN' : 'ES'}
-                  </button>
+                <div className="flex gap-2 mr-4 bg-hub-card p-1.5 rounded-2xl border border-hub-border shadow-sm items-center">
+                  <LanguageSwitcher userId={sessionUser.id} />
                 </div>
                 
                 <div className="text-right hidden sm:block">
@@ -919,6 +975,33 @@ const App = () => {
                   </svg>
                   <span className="text-sm font-black text-hub-text">{afseScore.toFixed(0)}</span>
                 </div>
+              </div>
+            </div>
+
+            {/* AURON COPILOT COMPANION BANNER */}
+            <div className="max-w-7xl mx-auto mb-10 relative z-20 group">
+              <div className="absolute inset-0 bg-gradient-to-r from-[#00E5FF]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000 rounded-3xl blur-xl"></div>
+              <div className="relative flex flex-col md:flex-row items-center justify-between gap-6 p-6 md:p-8 rounded-3xl border transition-all duration-500 hover:border-[#00E5FF]/40 bg-black/40 backdrop-blur-md overflow-hidden" style={{ borderColor: T.border2 }}>
+                <div className="absolute top-0 right-0 w-64 h-64 bg-[#00E5FF]/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2"></div>
+                
+                <div className="flex items-center gap-5 relative z-10 w-full md:w-auto">
+                  <div className="w-14 h-14 rounded-full flex flex-shrink-0 items-center justify-center bg-gradient-to-tr from-[#003087] to-[#00E5FF]/30 border border-[#00E5FF]/30 shadow-[0_0_20px_rgba(0,229,255,0.2)] relative group-hover:scale-110 transition-transform duration-500">
+                     <span className="text-[#00E5FF] font-black text-xl">A</span>
+                     <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center p-0.5" style={{ background: T.bg }}>
+                       <div className="w-2.5 h-2.5 rounded-full bg-[#00E676] animate-pulse"></div>
+                     </div>
+                  </div>
+                  <div>
+                    <h3 className="text-[#00E5FF] font-black uppercase tracking-[0.2em] text-xs md:text-sm mb-1">Auron Copilot</h3>
+                    <p className="text-white font-medium text-sm md:text-base italic" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                      "Construyes a la medida de {company?.name?.split(' ')[0] ?? 'tu Empresa'}, pero nunca estás solo."
+                    </p>
+                  </div>
+                </div>
+                
+                <button onClick={() => { setActiveView('workspace'); }} className="w-full md:w-auto px-6 py-3 rounded-xl hover:bg-[#00E5FF]/20 border border-[#00E5FF]/30 text-[#00E5FF] text-xs font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 flex-shrink-0 relative z-10 hover:shadow-[0_8px_25px_rgba(0,229,255,0.15)]" style={{ background: 'rgba(0,229,255,0.1)' }}>
+                  INICIAR CONSTRUCCIÓN <ArrowRight size={14} className="stroke-[3px]"/>
+                </button>
               </div>
             </div>
 
@@ -950,15 +1033,15 @@ const App = () => {
                   setActiveView('workspace');
               }} />}
               {activeModule === MEModule.GESTIONAME && <ModuleGestionaME />}
-              {activeModule === MEModule.CAPACITAME && <ModuleCapacitaME />}
+              {activeModule === MEModule.CAPACITAME && <ModuleCapacitaME userLevel={userLevel} companyName={company?.name} />}
               {activeModule === MEModule.EVALUAME && <ModuleEvaluaME />}
               {activeModule === MEModule.CONSULTAME && <ModuleConsultaME />}
             </div>
             
             <div className="max-w-7xl mx-auto text-center py-8 mt-12 border-t" style={{ borderColor: T.border }}>
-              <p className="text-base font-semibold" style={{ color: T.textDim }}>{t('brand.slogan')}</p>
+              <p className="text-base font-semibold" style={{ color: T.textDim }}>{t('common:brand.slogan')}</p>
               <p className="text-lg font-black uppercase tracking-widest mt-2" style={{ color: T.cyan, opacity: 0.5 }}>
-                {t('brand.sloganAccent')}
+                {t('common:brand.sloganAccent')}
               </p>
             </div>
           </div>
@@ -1080,12 +1163,33 @@ const App = () => {
                   </div>
                 </details>
                 
+                {auronAttachedFile && (
+                  <div className="flex items-center justify-between mb-3 px-3 py-1.5 rounded-lg border animate-in fade-in"
+                    style={{ background: 'rgba(0,229,255,0.05)', borderColor: 'rgba(0,229,255,0.2)', color: T.cyan }}>
+                    <span className="flex items-center gap-2 truncate text-xs font-bold">
+                      <Paperclip size={12} /> {auronAttachedFile.name}
+                    </span>
+                    <button type="button" onClick={() => setAuronAttachedFile(null)} className="hover:text-white transition-colors ml-2">
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+                
                 <form onSubmit={handleConsultation}
-                  className="flex items-center gap-3 rounded-2xl px-2 py-2 transition-all focus-within:ring-2"
+                  className="flex items-center gap-3 rounded-2xl px-2 py-2 transition-all focus-within:ring-2 relative"
                   style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.border2}`, paddingLeft: 16 }}>
+                  
+                  <input type="file" ref={auronFileRef} onChange={handleAuronUpload} className="hidden" accept=".txt,.csv,.json,.md,.js,.ts" />
+                  
+                  <button type="button" onClick={() => auronFileRef.current?.click()}
+                    className="flex items-center justify-center transition-all hover:scale-110"
+                    style={{ color: T.textDim }} title="Adjuntar Archivo de Datos (CSV, TXT, MD)">
+                    <Paperclip size={16} />
+                  </button>
+
                   <button type="button" onClick={() => setIsListening(p => !p)}
                     className="flex items-center justify-center transition-all hover:scale-110"
-                    style={{ color: isListening ? T.red : T.textDim }}>
+                    style={{ color: isListening ? T.red : T.textDim }} title="Dictar por voz">
                     {isListening ? <MicOff size={16} /> : <Mic size={16} />}
                   </button>
                   <input value={input} onChange={e => setInput(e.target.value)}
@@ -1251,11 +1355,17 @@ const App = () => {
 
         {/* NEURO DOCK (GLOBAL) */}
         <div className="absolute bottom-[20px] left-1/2 -translate-x-1/2 flex items-end gap-3 z-50">
+          <FloatingCalculator />
+          <FloatingAgenda />
+          <FloatingCall />
           <FloatingGoogleSync />
           <FloatingNeuroNotes />
           <FloatingMail />
           <FloatingTaskManager />
           <FocusRadio />
+          <FloatingFinance />
+          <FloatingBreaks userLevel={userLevel} companyId={company?.id} userId={sessionUser?.id} />
+          <FloatingAI />
         </div>
 
       </div>

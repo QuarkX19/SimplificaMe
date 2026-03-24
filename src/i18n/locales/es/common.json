@@ -1,46 +1,109 @@
 {
   "brand": {
-    "name": "Architecture",
+    "name": "Arquitectura",
     "accent": "ME",
-    "tagline": "Neuro Code Style",
+    "tagline": "Neuro Code Style · Arquitectura ME",
     "company": "calidadysostenibilidad.com SAS",
-    "slogan": "You don't install software · You don't hire a consultancy",
-    "sloganAccent": "You build your Architecture ME"
+    "slogan": "Neuro-LMS · Elevando el potencial de tu organización",
+    "sloganAccent": "CION · Inteligencia Normativa Simplificada"
   },
   "nav": {
     "hub": "Hub",
-    "workspace": "Workspace",
-    "dashboard": "Dashboard",
+    "workspace": "Espacio",
+    "dashboard": "Panel",
     "admin": "Admin",
     "back": "← Hub"
   },
   "auth": {
-    "access": "Access · Magic Link",
-    "placeholder": "director@company.com",
-    "submit": "Request Access",
-    "sending": "Sending...",
-    "security": "E2E Encrypted · No passwords",
-    "sentTitle": "Magic Link sent",
-    "sentBody": "Check your email",
-    "sentExpiry": "Link expires in 10 minutes",
-    "backButton": "← Use another email",
-    "errorEmail": "Enter a valid email",
-    "errorGeneric": "Error sending link. Please try again."
+    "access": "Acceso · Magic Link",
+    "placeholder": "director@empresa.com",
+    "submit": "Solicitar Acceso",
+    "sending": "Enviando...",
+    "security": "Cifrado E2E · Sin contraseñas",
+    "sentTitle": "Magic Link enviado",
+    "sentBody": "Revisa tu correo en",
+    "sentExpiry": "El enlace expira en 10 minutos",
+    "backButton": "← Usar otro correo",
+    "errorEmail": "Ingresa un correo válido",
+    "errorGeneric": "Error al enviar. Intenta de nuevo."
   },
   "status": {
-    "online": "System Online",
-    "loading": "Starting Architecture ME",
-    "operational": "System Operational",
-    "active": "Active",
-    "locked": "See Plans"
+    "online": "Sistema en Línea",
+    "loading": "Iniciando Arquitectura ME",
+    "operational": "Sistema Operacional",
+    "active": "Activo",
+    "locked": "Ver Planes"
   },
   "actions": {
-    "enter": "Enter System",
-    "logout": "Sign out",
-    "refresh": "Refresh"
+    "enter": "Ingresar al Sistema",
+    "logout": "Cerrar sesión",
+    "refresh": "Actualizar"
   },
   "errors": {
-    "connectionError": "Connection error. Retrying...",
-    "selectLayer": "Select a layer"
+    "connectionError": "Error de conexión. Reintentando...",
+    "selectLayer": "Selecciona una capa"
+  },
+  "onboarding": {
+    "title": "Inicializar",
+    "titleAccent": "Entorno",
+    "subtitle": "Tu acceso ha sido verificado.<br/>Registra el primer entorno empresarial para habilitar las matrices.",
+    "phName": "Nombre Oficial de la Empresa",
+    "phNit": "NIT / Identificación Fiscal (Opcional)",
+    "phSector": "Sector / Industria (Opcional)",
+    "btnLoading": "Generando Núcleo...",
+    "btnSubmit": "Construir Matriz Maestra",
+    "errName": "El nombre de la empresa es obligatorio.",
+    "errGeneric": "Error de conexión con el núcleo",
+    "myEnvironments": "Mis Entornos",
+    "registerEnvironment": "Registrar Entorno"
+  },
+  "gestiona": {
+    "warRoom": "Sala de Guerra",
+    "assets": "Matriz de Activos (SIGA)",
+    "requirements": "Evaluación de Requisitos Legales",
+    "productivity": "Rendimiento Operativo",
+    "compliance": "Cumplimiento Corporativo",
+    "institutionalStatus": "Estado de Cumplimiento",
+    "characterization": "Caracterización del Proceso",
+    "info": "Información General",
+    "ref": "Documentos de Referencia",
+    "docs": "Documentos del Proceso",
+    "forms": "Formatos",
+    "risk": "Gestión de Riesgos",
+    "improvement": "Mejora Continua",
+    "auditAlert": "Próxima Evaluación",
+    "deadline": "Fecha límite para evidencias",
+    "connected": "Conectado",
+    "strategic": "Estratégico",
+    "safety": "SG-SST",
+    "safety_short": "SST",
+    "health": "Salud Pública",
+    "health_short": "SALUD",
+    "security": "Seguridad Logística",
+    "security_short": "SECURITY",
+    "environment": "Gestión Ambiental",
+    "environment_short": "AMBIENTE",
+    "quality": "Calidad ISO",
+    "quality_short": "CALIDAD",
+    "docs_short": "DOCS",
+    "minutes_short": "ACTAS",
+    "audit_short": "AUDITORÍA",
+    "pamm_short": "PAMM",
+    "mipg_short": "MIPG",
+    "oci_short": "OCI",
+    "strategy_short": "PLANES",
+    "assets_short": "ACTIVOS"
+  },
+  "consulta": {
+    "title": "Human Connect",
+    "tagline": "Interacción directa con expertos especializados",
+    "expertSearch": "Buscar experto por nombre o especialidad técnica...",
+    "agenda": "Agenda Técnica",
+    "meet": "Meet",
+    "chat": "Chat",
+    "assign": "Asignar Consultor",
+    "rating": "Calificación",
+    "masterControl": "Control Maestro",
+    "globalMonitor": "Monitoreo Global"
   }
 }

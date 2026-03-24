@@ -2,10 +2,10 @@
   "brand": {
     "name": "Architecture",
     "accent": "ME",
-    "tagline": "Neuro Code Style",
+    "tagline": "Neuro Code Style · Architecture ME",
     "company": "calidadysostenibilidad.com SAS",
-    "slogan": "You don't install software · You don't hire a consultancy",
-    "sloganAccent": "You build your Architecture ME"
+    "slogan": "Neuro-LMS · Elevating your organization's potential",
+    "sloganAccent": "CION · Simplified Normative Intelligence"
   },
   "nav": {
     "hub": "Hub",
@@ -21,7 +21,7 @@
     "sending": "Sending...",
     "security": "E2E Encrypted · No passwords",
     "sentTitle": "Magic Link sent",
-    "sentBody": "Check your email",
+    "sentBody": "Check your email at",
     "sentExpiry": "Link expires in 10 minutes",
     "backButton": "← Use another email",
     "errorEmail": "Enter a valid email",
@@ -42,5 +42,54 @@
   "errors": {
     "connectionError": "Connection error. Retrying...",
     "selectLayer": "Select a layer"
+  },
+  "gestiona": {
+    "warRoom": "War Room",
+    "assets": "Asset Matrix (SIGA)",
+    "requirements": "Legal Requirement Evaluation",
+    "productivity": "Operational Performance",
+    "compliance": "Corporate Compliance",
+    "institutionalStatus": "Institutional Status",
+    "characterization": "Process Characterization",
+    "info": "General Information",
+    "ref": "Reference Documents",
+    "docs": "Process Documents",
+    "forms": "Forms",
+    "risk": "Risk Management",
+    "improvement": "Continuous Improvement",
+    "auditAlert": "Next Evaluation",
+    "deadline": "Evidence Deadline",
+    "connected": "Connected",
+    "strategic": "Strategic",
+    "safety": "SG-SST",
+    "safety_short": "SST",
+    "health": "Public Health",
+    "health_short": "HEALTH",
+    "security": "Logistics Security",
+    "security_short": "SECURITY",
+    "environment": "Environmental Management",
+    "environment_short": "ENV",
+    "quality": "Quality ISO",
+    "quality_short": "QUALITY",
+    "docs_short": "DOCS",
+    "minutes_short": "MINUTES",
+    "audit_short": "AUDIT",
+    "pamm_short": "PAMM",
+    "mipg_short": "MIPG",
+    "oci_short": "OCI",
+    "strategy_short": "STRATEGY",
+    "assets_short": "ASSETS"
+  },
+  "consulta": {
+    "title": "Human Connect",
+    "tagline": "Direct interaction with specialized experts",
+    "expertSearch": "Search for expert by name or technical specialty...",
+    "agenda": "Technical Agenda",
+    "meet": "Meet",
+    "chat": "Chat",
+    "assign": "Assign Consultant",
+    "rating": "Rating",
+    "masterControl": "Master Control",
+    "globalMonitor": "Global Monitoring"
   }
 }

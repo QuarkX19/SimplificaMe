@@ -7,6 +7,7 @@ interface Note {
   hasAlarm: boolean;
   alarmDate?: string;
   alarmTime?: string;
+  alarmTriggered?: boolean;
 }
 
 export const FloatingNeuroNotes: React.FC = () => {
@@ -19,9 +20,46 @@ export const FloatingNeuroNotes: React.FC = () => {
   }, []);
 
   const [notes, setNotes] = useState<Note[]>([
-    { id: 1, text: 'Revisar costos extra en Fase 3', hasAlarm: true, alarmDate: '2026-03-22', alarmTime: '10:00' },
+    { id: 1, text: 'Revisar costos extra en Fase 3', hasAlarm: true, alarmDate: '2026-03-22', alarmTime: '10:00', alarmTriggered: true },
     { id: 2, text: 'Pedirle a Ana la matriz de roles', hasAlarm: false }
   ]);
+
+  // Alarm Checker
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      // Formato local YYYY-MM-DD
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const currentDate = `${year}-${month}-${day}`;
+      const currentTime = now.toTimeString().substring(0, 5); // HH:MM
+
+      let updated = false;
+      const newNotes = notes.map(note => {
+        if (note.hasAlarm && note.alarmDate === currentDate && note.alarmTime === currentTime && !note.alarmTriggered) {
+          // Play bell sound
+          const audio = new Audio('https://actions.google.com/sounds/v1/water/droplet_1.ogg');
+          audio.volume = 0.8;
+          audio.play().catch(e => console.log('Audio block:', e));
+          
+          updated = true;
+          // Auto-open widget to show the alarm note
+          setIsOpen(true);
+          window.dispatchEvent(new CustomEvent('neuro-dock-expand', { detail: 'notes' }));
+          
+          return { ...note, alarmTriggered: true };
+        }
+        return note;
+      });
+
+      if (updated) {
+        setNotes(newNotes);
+      }
+    }, 10000); // Check every 10s
+
+    return () => clearInterval(interval);
+  }, [notes]);
   const [input, setInput] = useState('');
   const [alarm, setAlarm] = useState(false);
   const [alarmDate, setAlarmDate] = useState('');

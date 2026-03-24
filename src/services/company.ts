@@ -15,6 +15,9 @@ export interface Company {
   name: string;
   nit?: string;
   sector?: string;
+  country?: string;
+  stage?: string;
+  portfolio?: string;
   plan: 'starter' | 'pro' | 'enterprise';
   afse_score: number;
 }
@@ -36,24 +39,31 @@ export interface LayerMatrixData {
 // ── Crear empresa nueva ──
 export const createCompany = async (
   userId: string,
-  data: Pick<Company, 'name' | 'nit' | 'sector'>
+  data: Pick<Company, 'name' | 'nit' | 'sector' | 'country' | 'stage' | 'portfolio'>
 ): Promise<Company | null> => {
   const { data: company, error } = await supabase
     .from('companies')
-    .insert({ ...data, plan: 'starter' })
+    .insert({ 
+      ...data, 
+      plan: 'starter',
+      afse_score: 0,
+      preferred_lang: 'es' 
+    })
     .select()
     .single();
 
   if (error) {
-    console.error('[Company] Error creando empresa:', error.message);
+    console.error('[Company] Error creando empresa (RLS o Constraints):', error);
     return null;
   }
 
   const { error: memberError } = await supabase.from('company_members').insert({
-    company_id:  company.id,
-    user_id:     userId,
-    role:        'owner',
-    accepted_at: new Date().toISOString(),
+    company_id:     company.id,
+    user_id:        userId,
+    role:           'owner',
+    me_level:       'estrategico',
+    preferred_lang: 'es',
+    accepted_at:    new Date().toISOString(),
   });
   if (memberError) console.error('[Company] Error agregando owner:', memberError.message);
 
@@ -61,6 +71,7 @@ export const createCompany = async (
     company_id:   company.id,
     cycle_number: 1,
     status:       'active',
+    score:        0,
     created_by:   userId,
   });
   if (cycleError) console.error('[Company] Error creando ciclo:', cycleError.message);

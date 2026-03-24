@@ -176,6 +176,7 @@ const LayersDashboard: React.FC<Props> = ({ userId, companyName }) => {
   } = useAuronLayer(userId, companyName);
 
   const [input, setInput] = useState('');
+  const [showDevView, setShowDevView] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLTextAreaElement>(null);
 
@@ -244,6 +245,9 @@ const LayersDashboard: React.FC<Props> = ({ userId, companyName }) => {
                 ✓ Completar L{activeLayerId}
               </button>
             )}
+            <button className="ld-adv-btn" style={{ background: 'var(--bg3)', color: 'var(--textMid)', borderColor: 'var(--border2)' }} onClick={() => setShowDevView(true)}>
+              Vista Técnica / Académica
+            </button>
             <span className="ld-co">{companyName}</span>
           </div>
         </div>
@@ -307,6 +311,11 @@ const LayersDashboard: React.FC<Props> = ({ userId, companyName }) => {
             </div>
 
             <div className="ld-msgs">
+              {activeLayer?.context && (
+                <div className="ld-adv-notice" style={{ alignSelf: 'center', background: 'var(--cyan-bg)', borderColor: 'var(--cyan)', color: 'var(--cyan)', marginBottom: '10px' }}>
+                  ✓ Contexto heredado de L{activeLayer.context.previousLayerId}
+                </div>
+              )}
               {!activeLayer?.messages?.length ? (
                 <div className="ld-empty">
                   <div className="ld-empty-ic">⚡</div>
@@ -362,6 +371,41 @@ const LayersDashboard: React.FC<Props> = ({ userId, companyName }) => {
           </div>
         </div>
       </div>
+
+      {/* CONSULTANT VIEW MODAL */}
+      {showDevView && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', padding: '24px', borderRadius: '16px', maxWidth: '650px', width: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontFamily: '"Syne", sans-serif', fontSize: '18px', fontWeight: 900, color: 'var(--text)' }}>Instrumento de Output (Vista Técnica)</h3>
+                <p style={{ fontSize: '11px', color: 'var(--textDim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '4px' }}>Datos consolidados por el Motor de Interrelación L{activeLayerId - 1} ➔ L{activeLayerId}</p>
+              </div>
+              <button onClick={() => setShowDevView(false)} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--textDim)', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', transition: 'all 0.2s' }}>×</button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg3)', borderRadius: '12px', padding: '16px', border: '1px solid var(--border2)' }}>
+              {!activeLayer?.context ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--textDim)' }}>
+                  <span style={{ fontSize: '24px', display: 'block', marginBottom: '10px' }}>🔍</span>
+                  Aún no hay instrumentos generados en esta capa.<br/>
+                  <span style={{ fontSize: '11px', opacity: 0.7 }}>Completa una capa previa interactuando con Auron para que el Motor extraiga los insights.</span>
+                </div>
+              ) : (
+                <pre style={{ margin: 0, fontFamily: '"JetBrains Mono", monospace', fontSize: '12px', color: 'var(--cyan)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                  {JSON.stringify(activeLayer.context, null, 2)}
+                </pre>
+              )}
+            </div>
+
+            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowDevView(false)} className="ld-adv-btn" style={{ fontSize: '12px', padding: '8px 16px' }}>
+                Cerrar vista
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

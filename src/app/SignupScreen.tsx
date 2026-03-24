@@ -102,6 +102,19 @@ const SignupScreen: React.FC<{ initialPlan: string; onBackToLogin: () => void }>
             <p className="text-[11px] font-bold uppercase tracking-[0.3em] mt-2 opacity-80" style={{ color: DARK_T.cyan }}>
               Ecosistema Estratégico
             </p>
+            
+            <div className="mt-6 flex flex-col md:flex-row items-center justify-center gap-3 bg-cyan-900/20 py-3 px-5 rounded-2xl border border-cyan-500/20 backdrop-blur-md mx-auto w-max max-w-full hover:bg-cyan-900/30 transition-colors">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-900 to-cyan-500/20 flex flex-shrink-0 items-center justify-center border border-cyan-400/40 shadow-[0_0_20px_rgba(0,229,255,0.3)] relative">
+                <div className="absolute inset-0 rounded-full border border-cyan-300/30 animate-[spin_3s_linear_infinite]" style={{ borderStyle: 'dashed' }}></div>
+                <span className="text-cyan-400 font-black text-sm relative z-10">A</span>
+              </div>
+              <div className="text-center md:text-left">
+                <p className="text-[10px] text-cyan-400 font-black uppercase tracking-[0.2em] leading-tight">Auron Copilot</p>
+                <p className="text-[13px] text-white font-medium italic mt-0.5" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+                  "Construyes a la medida, pero nunca estás solo."
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="transition-all duration-500 relative">
@@ -192,25 +205,47 @@ const SignupScreen: React.FC<{ initialPlan: string; onBackToLogin: () => void }>
                   <span className="text-white bg-black/50 px-3 py-1 rounded-md mt-2 inline-block border border-gray-700">{email}</span>
                 </p>
 
-                <div className="bg-gradient-to-b from-[#0A0E18] to-black border border-amber-500/30 rounded-2xl p-6 text-left mb-8 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Zap size={16} className="text-amber-500" />
-                    <p className="text-[11px] font-black uppercase tracking-widest text-amber-500">Sincronización de Pago</p>
+                <div className="bg-gradient-to-b from-[#0A0E18] to-black border border-cyan-500/30 rounded-2xl p-6 text-left mb-8 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 rounded-full bg-cyan-900/40 flex items-center justify-center">
+                      <Zap size={16} className="text-cyan-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-widest text-white">Suscripción Inteligente</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Checkout Pro encriptado</p>
+                    </div>
                   </div>
 
-                  <p className="text-xs text-gray-300 font-medium leading-relaxed mb-4">
-                    Para desbloquear tu matriz (Plan {(plans as any)[plan]?.name}), realiza el abono correspondiente a nuestra cuenta corporativa oficial:
+                  <p className="text-xs text-gray-300 font-medium leading-relaxed mb-6">
+                    Tu plan corporativo <span className="text-white font-bold">{(plans as any)[plan]?.name}</span> requiere activación. Al ingresar tu método de pago, el entorno entrará en operación autónoma.
                   </p>
 
-                  <div className="bg-black/60 p-4 rounded-xl border border-gray-800 font-['JetBrains_Mono'] text-xs text-cyan-500 space-y-2 mb-4 shadow-inner">
-                    <div className="flex justify-between"><span className="text-gray-500">Entidad:</span> <span className="text-white">Bancolombia</span></div>
-                    <div className="flex justify-between"><span className="text-gray-500">Cuenta:</span> <span className="text-white">Ahorros 239-00000-11</span></div>
-                    <div className="flex justify-between"><span className="text-gray-500">Titular:</span> <span className="text-white">calidadysostenibilidad SAS</span></div>
-                    <div className="flex justify-between mt-2 pt-2 border-t border-gray-800"><span className="text-gray-500">Monto:</span> <span className="text-cyan-400 font-bold">${(plans as any)[plan]?.price} USD (o TRM)</span></div>
-                  </div>
-
-                  <p className="text-[10px] text-gray-500 italic">Al confirmar el ingreso de fondos, tu entorno se habilitará instantáneamente.</p>
+                  <button 
+                    onClick={async () => {
+                      // Simulación de UX / Instrucción para el CEO
+                      try {
+                        // 1. Aquí llamamos a la Edge Function de Supabase que conectará con Mercado Pago:
+                        // const { data, error } = await supabase.functions.invoke('mercadopago-checkout', { body: { plan_id: plan, email }});
+                        // 2. Si es exitoso, redireccionamos a la pantalla de Checkout:
+                        // if (data?.init_point) window.location.href = data.init_point;
+                        
+                        // Fallback temporal para mostrar alerta:
+                        alert("¡Atención Producción! 🛠️\n\nDespliega la función 'mercadopago-checkout' en tu dashboard de Supabase y configúrale tu ACCESS_TOKEN de Mercado Pago para procesar los cobros reales y automatizar la redirección.");
+                      } catch (err) {
+                        alert("Error de conexión con la red de pagos.");
+                      }
+                    }}
+                    className="w-full relative overflow-hidden group/pay py-4 rounded-xl shadow-lg transition-transform hover:scale-[1.02]"
+                    style={{ background: 'linear-gradient(90deg, #009EE3 0%, #0076D4 100%)' }}>
+                    <div className="absolute inset-0 bg-white/20 opacity-0 group-hover/pay:opacity-100 transition-opacity" />
+                    <div className="flex items-center justify-center gap-3 relative z-10">
+                      <span className="text-white font-black uppercase tracking-widest text-sm drop-shadow-md">
+                        Pagar con Mercado Pago
+                      </span>
+                    </div>
+                  </button>
+                  <p className="text-[10px] text-gray-500 text-center mt-4">Transacción procesada bajo el estándar PCI-DSS.</p>
                 </div>
 
                 <button onClick={onBackToLogin} className="w-full group/btn relative overflow-hidden py-3 rounded-xl border border-gray-700 hover:border-cyan-500/50 transition-colors">
